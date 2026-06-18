@@ -1,0 +1,3417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gFind — Busca de concursos de TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="screens.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="22" fill="#1976d2"/>
+      <circle cx="45" cy="45" r="16" fill="none" stroke="#ffffff" stroke-width="6"/>
+      <line x1="57" y1="57" x2="70" y2="70" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="72" cy="30" r="7" fill="#4caf50"/>
+    </svg>
+  </template>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- ui.jsx -->
+  <script type="text/babel">
+/* global React */
+const { useState, useRef, useEffect, useLayoutEffect, createContext, useContext } = React;
+
+/* ---------------- Icon ---------------- */
+function Icon({ name, size = 24, fill = false, className = "", style }) {
+  const cls = ["msym", `s${size}`, fill ? "fill" : "", className].filter(Boolean).join(" ");
+  return <span className={cls} style={style} aria-hidden="true">{name}</span>;
+}
+
+/* ---------------- Button ---------------- */
+function Button({ variant = "text", size, startIcon, endIcon, children, className = "", neutral, block, notext, ...rest }) {
+  const cls = [
+    "btn",
+    variant === "contained" ? "btn-contained" :
+    variant === "secondary" ? "btn-secondary" :
+    variant === "outlined" ? "btn-outlined" : "btn-text",
+    neutral ? "neutral" : "",
+    size === "sm" ? "btn-sm" : size === "lg" ? "btn-lg" : "",
+    block ? "btn-block" : "", notext ? "notext" : "", className,
+  ].filter(Boolean).join(" ");
+  return (
+    <button className={cls} {...rest}>
+      {startIcon && <Icon name={startIcon} />}
+      {children}
+      {endIcon && <Icon name={endIcon} />}
+    </button>
+  );
+}
+
+function IconButton({ name, size = 24, fill = false, className = "", btnSize, ...rest }) {
+  return (
+    <button className={["icon-btn", btnSize === "sm" ? "sm" : "", className].filter(Boolean).join(" ")} {...rest}>
+      <Icon name={name} size={size} fill={fill} />
+    </button>
+  );
+}
+
+/* ---------------- Chip ---------------- */
+function Chip({ label, icon, color, outlined, selected, onClick, onDelete, size, className = "" }) {
+  const cls = [
+    "chip",
+    color === "primary" ? "chip-primary" : color === "secondary" ? "chip-secondary" : color === "ti" ? "chip-ti" : "",
+    outlined ? "outlined" : "", selected ? "selected" : "",
+    onClick ? "clickable" : "", size === "sm" ? "sm" : "", className,
+  ].filter(Boolean).join(" ");
+  return (
+    <span className={cls} onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(e); } } : undefined}>
+      {icon && <Icon name={icon} size={16} />}
+      {label}
+      {onDelete && (
+        <span className="chip-x" onClick={(e) => { e.stopPropagation(); onDelete(e); }} role="button" aria-label="Remover">
+          <Icon name="close" size={14} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+/* ---------------- Card ---------------- */
+function Card({ children, hoverable, flat, elevated, className = "", ...rest }) {
+  const cls = ["card", hoverable ? "hoverable" : "", flat ? "flat" : "", elevated ? "elevated" : "", className].filter(Boolean).join(" ");
+  return <div className={cls} {...rest}>{children}</div>;
+}
+
+/* ---------------- TextField ---------------- */
+function TextField({ label, value, onChange, placeholder, type = "text", icon, endIcon, hint, error, multiline, rows = 3, onKeyDown, onBlur, autoFocus, className = "", inputMode, name }) {
+  return (
+    <div className={["field", error ? "error" : "", className].filter(Boolean).join(" ")}>
+      {label && <label>{label}</label>}
+      <div className={["control", multiline ? "area" : ""].filter(Boolean).join(" ")}>
+        {icon && <Icon name={icon} size={20} />}
+        {multiline
+          ? <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} onKeyDown={onKeyDown} onBlur={onBlur} autoFocus={autoFocus} name={name} />
+          : <input type={type} value={value} onChange={onChange} placeholder={placeholder} onKeyDown={onKeyDown} onBlur={onBlur} autoFocus={autoFocus} inputMode={inputMode} name={name} />}
+        {endIcon}
+      </div>
+      {hint && <span className="hint">{hint}</span>}
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, children, hint, className = "" }) {
+  return (
+    <div className={["field", className].filter(Boolean).join(" ")}>
+      {label && <label>{label}</label>}
+      <div className="control select-wrap" style={{ paddingRight: 4 }}>
+        <select value={value} onChange={onChange}>{children}</select>
+        <Icon name="expand_more" size={20} className="arrow" />
+      </div>
+      {hint && <span className="hint">{hint}</span>}
+    </div>
+  );
+}
+
+/* ---------------- SearchableSelect ---------------- */
+function SearchableSelect({ label, value, onChange, options = [], hint, placeholder = "Selecionar…", className = "" }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const filtered = query.trim() ? options.filter((o) => norm(o).includes(norm(query.trim()))) : options;
+
+  const select = (opt) => {
+    onChange({ target: { value: opt } });
+    setOpen(false);
+    setQuery("");
+  };
+
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) setTimeout(() => inputRef.current?.focus(), 40);
+    else setQuery("");
+  };
+
+  return (
+    <div className={["field", className].filter(Boolean).join(" ")} style={{ position: "relative" }} ref={wrapRef}>
+      {label && <label>{label}</label>}
+      <div
+        className="control select-wrap"
+        style={{ paddingRight: 12, cursor: "pointer", background: open ? "var(--bg-sunken)" : undefined }}
+        onClick={handleToggle}
+      >
+        {open ? (
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filtrar opções…"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") { setOpen(false); setQuery(""); }
+              if (e.key === "Enter" && filtered.length === 1) select(filtered[0]);
+            }}
+            style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontSize: "inherit", color: "var(--text-primary)" }}
+          />
+        ) : (
+          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: value ? "var(--text-primary)" : "var(--text-disabled)" }}>
+            {value || placeholder}
+          </span>
+        )}
+        <Icon name={open ? "expand_less" : "expand_more"} size={20} className="arrow" style={{ flexShrink: 0 }} />
+      </div>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 300,
+          background: "var(--paper)", border: "1px solid var(--divider-strong)",
+          borderRadius: 8, boxShadow: "var(--e3, var(--e2))",
+          maxHeight: 260, overflowY: "auto",
+        }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: "10px 16px", color: "var(--text-secondary)", fontSize: ".85rem" }}>Nenhuma opção encontrada</div>
+          ) : filtered.map((opt) => (
+            <div
+              key={opt}
+              className="menu-item"
+              style={opt === value ? { background: "var(--primary-050)", fontWeight: 600 } : {}}
+              onClick={(e) => { e.stopPropagation(); select(opt); }}
+            >
+              {opt === value
+                ? <Icon name="check" size={18} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                : <span style={{ width: 18, flexShrink: 0 }} />}
+              <span>{opt}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {hint && <span className="hint">{hint}</span>}
+    </div>
+  );
+}
+
+/* ---------------- Switch ---------------- */
+function Switch({ checked, onChange, label }) {
+  return (
+    <label className="switch">
+      <input type="checkbox" checked={checked} onChange={onChange} />
+      <span className="track"><span className="thumb" /></span>
+      {label && <span>{label}</span>}
+    </label>
+  );
+}
+
+/* ---------------- ToggleGroup ---------------- */
+function ToggleGroup({ options, value, onChange, multiple }) {
+  const isOn = (v) => multiple ? value.includes(v) : value === v;
+  const toggle = (v) => {
+    if (multiple) onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+    else onChange(value === v ? "" : v);
+  };
+  return (
+    <div className="toggle-group">
+      {options.map((o) => (
+        <button key={o.value} className={["tg-btn", isOn(o.value) ? "on" : ""].filter(Boolean).join(" ")} onClick={() => toggle(o.value)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ---------------- Avatar ---------------- */
+function Avatar({ children, size = 40, color = "#1976d2", round, src, alt, style, className = "" }) {
+  return (
+    <span className={["avatar", round ? "round" : "", className].filter(Boolean).join(" ")}
+      style={{ width: size, height: size, background: src ? "transparent" : color, fontSize: size * 0.4, ...style }}>
+      {src ? <img src={src} alt={alt} /> : children}
+    </span>
+  );
+}
+
+/* ---------------- Relevance bar ---------------- */
+function describeRelevance(score) {
+  const percent = Math.round(score * 100);
+  if (score >= 0.75) return { label: "Alta aderência", color: "var(--success)", textColor: "var(--secondary-dark)", percent };
+  if (score >= 0.55) return { label: "Média aderência", color: "var(--warning)", textColor: "#8a5300", percent };
+  return { label: "Baixa aderência", color: "var(--text-disabled)", textColor: "var(--text-secondary)", percent };
+}
+function RelevanceBar({ score }) {
+  const { label, color, textColor, percent } = describeRelevance(score);
+  return (
+    <div className="relbar-wrap" title={`Similaridade: ${percent}%`}>
+      <div className="row spread" style={{ marginBottom: 5 }}>
+        <span className="t-cap" style={{ fontWeight: 600, color: textColor }}>{label}</span>
+        <span className="t-cap text-secondary">{percent}%</span>
+      </div>
+      <div className="relbar-track"><div className="relbar-fill" style={{ width: `${percent}%`, background: color }} /></div>
+    </div>
+  );
+}
+
+/* ---------------- Menu (popover anchored) ---------------- */
+function Menu({ open, onClose, anchorRef, children, align = "right", width }) {
+  const ref = useRef(null);
+  const [pos, setPos] = useState(null);
+  useLayoutEffect(() => {
+    if (open && anchorRef?.current) {
+      const r = anchorRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: align === "right" ? r.right : r.left });
+    }
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target) && !anchorRef?.current?.contains(e.target)) onClose(); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+  if (!open || !pos) return null;
+  const style = { top: pos.top, position: "fixed", width, zIndex: 200 };
+  if (align === "right") style.right = window.innerWidth - pos.left; else style.left = pos.left;
+  // Portal to <body> so the fixed menu escapes any transformed/animated card
+  // ancestor (e.g. .fade-in) that would otherwise become its containing block
+  // and trap it inside the card's stacking context.
+  return ReactDOM.createPortal(<div className="menu" ref={ref} style={style}>{children}</div>, document.body);
+}
+function MenuItem({ icon, children, onClick, danger }) {
+  return (
+    <div className={["menu-item", danger ? "danger" : ""].filter(Boolean).join(" ")} onClick={onClick}>
+      {icon && <Icon name={icon} size={20} />}<span>{children}</span>
+    </div>
+  );
+}
+
+/* ---------------- Dialog ---------------- */
+function Dialog({ open, onClose, children, width }) {
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open]);
+  if (!open) return null;
+  return (
+    <div className="scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="dialog" style={width ? { maxWidth: width } : undefined}>{children}</div>
+    </div>
+  );
+}
+
+/* ---------------- Inline alert ---------------- */
+function InlineAlert({ severity = "info", icon, title, children, action }) {
+  const def = { error: "error", info: "info", success: "check_circle", warn: "warning" }[severity];
+  return (
+    <div className={`alert alert-${severity}`}>
+      <Icon name={icon || def} size={22} />
+      <div className="grow">
+        {title && <div className="t-sub2" style={{ marginBottom: 2 }}>{title}</div>}
+        <div className="t-body2">{children}</div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/* ---------------- Skeleton ---------------- */
+function Skeleton({ w = "100%", h = 16, r = 4, style }) {
+  return <div className="skl" style={{ width: w, height: h, borderRadius: r, ...style }} />;
+}
+
+Object.assign(window, {
+  Icon, Button, IconButton, Chip, Card, TextField, Select, SearchableSelect, Switch, ToggleGroup,
+  Avatar, RelevanceBar, describeRelevance, Menu, MenuItem, Dialog, InlineAlert, Skeleton,
+});
+
+  </script>
+
+  <!-- data.jsx -->
+  <script type="text/babel">
+/* gFind — dados mock realistas de concursos brasileiros */
+
+/* Cores determinísticas por órgão (monograma fallback) */
+const ORGAO_COLORS = ["#1565c0", "#2e7d32", "#6a1b9a", "#c62828", "#00695c", "#4527a0", "#283593", "#558b2f", "#ad1457", "#37474f"];
+function orgaoColor(orgao) {
+  let h = 0; for (let i = 0; i < orgao.length; i++) h = (h * 31 + orgao.charCodeAt(i)) >>> 0;
+  return ORGAO_COLORS[h % ORGAO_COLORS.length];
+}
+function orgaoInitials(orgao) {
+  const stop = new Set(["de", "da", "do", "e", "dos", "das"]);
+  const words = orgao.replace(/[()]/g, " ").split(/[\s/-]+/).filter(Boolean);
+  const caps = words.filter((w) => w === w.toUpperCase() && w.length <= 6 && /[A-Z]/.test(w));
+  if (caps.length) return caps.join("").slice(0, 4);
+  return words.filter((w) => !stop.has(w.toLowerCase())).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
+}
+
+const BANCAS = ["CEBRASPE", "FGV", "FCC", "VUNESP", "IBFC", "Instituto AOCP"];
+
+/* Catálogo de cargos */
+const CARGOS = [
+  {
+    edital_id: "trf3-2026", cargo_id: "analista-ti",
+    nome_cargo: "Analista Judiciário — Tecnologia da Informação", orgao: "Tribunal Regional Federal da 3ª Região",
+    sigla: "TRF3", uf: "SP", banca: "FGV", is_ti: true, escolaridade: "Superior em Computação ou áreas correlatas",
+    nivel: "superior", salario: "R$ 13.994,78", salarioNum: 13994, carga_horaria: "40h semanais", vagas: 12, vagas_cr: 30,
+    score: 0.93, taxa: "R$ 130,00",
+    datas: { inscricao_ini: "2026-06-15", inscricao_fim: "2026-07-14", prova: "2026-09-13", resultado: "2026-11-05" },
+    conteudo_programatico: ["Engenharia de software e arquitetura de sistemas", "Banco de dados relacionais e NoSQL", "Redes de computadores e segurança da informação", "Desenvolvimento web (Java, Python) e APIs REST", "Governança de TI: ITIL, COBIT"],
+    atribuicoes: ["Desenvolver e manter sistemas judiciais", "Administrar bancos de dados e infraestrutura", "Garantir segurança e disponibilidade dos serviços de TI", "Elaborar documentação técnica e dar suporte às unidades"],
+    requisitos: "Diploma de curso superior na área de tecnologia da informação, devidamente registrado.",
+    url_edital: "#",
+  },
+  {
+    edital_id: "bacen-2026", cargo_id: "analista-infra",
+    nome_cargo: "Analista do Banco Central — Análise de Infraestrutura de TI", orgao: "Banco Central do Brasil",
+    sigla: "BACEN", uf: "DF", banca: "CEBRASPE", is_ti: true, escolaridade: "Superior em qualquer área",
+    nivel: "superior", salario: "R$ 20.924,80", salarioNum: 20924, carga_horaria: "40h semanais", vagas: 8, vagas_cr: 20,
+    score: 0.88, taxa: "R$ 150,00",
+    datas: { inscricao_ini: "2026-06-20", inscricao_fim: "2026-07-25", prova: "2026-10-04", resultado: "2026-12-10" },
+    conteudo_programatico: ["Infraestrutura de data centers e cloud (AWS, Azure)", "Virtualização e contêineres (Docker, Kubernetes)", "Segurança cibernética e criptografia", "Monitoramento e observabilidade", "Sistema Financeiro Nacional"],
+    atribuicoes: ["Planejar e operar a infraestrutura tecnológica do BC", "Gerir ambientes de nuvem e on-premise", "Responder a incidentes de segurança", "Apoiar a continuidade dos serviços críticos"],
+    requisitos: "Diploma de nível superior em qualquer área, reconhecido pelo MEC.",
+    url_edital: "#",
+  },
+  {
+    edital_id: "rfb-2026", cargo_id: "auditor-ti",
+    nome_cargo: "Analista Tributário — Tecnologia da Informação", orgao: "Receita Federal do Brasil",
+    sigla: "RFB", uf: "Nacional", banca: "FGV", is_ti: true, escolaridade: "Superior completo",
+    nivel: "superior", salario: "R$ 12.456,00", salarioNum: 12456, carga_horaria: "40h semanais", vagas: 15, vagas_cr: 40,
+    score: 0.81, taxa: "R$ 120,00",
+    datas: { inscricao_ini: "2026-07-01", inscricao_fim: "2026-08-05", prova: "2026-10-18", resultado: "2026-12-18" },
+    conteudo_programatico: ["Ciência de dados e analytics aplicados à fiscalização", "Bancos de dados e SQL avançado", "Linguagem Python e bibliotecas de dados", "Segurança da informação", "Noções de direito tributário"],
+    atribuicoes: ["Desenvolver soluções de análise de dados fiscais", "Apoiar sistemas de arrecadação e fiscalização", "Manter integridade e sigilo das bases de dados"],
+    requisitos: "Diploma de curso superior reconhecido pelo MEC.",
+    url_edital: "#",
+  },
+  {
+    edital_id: "tjsp-2026", cargo_id: "analista-sistemas",
+    nome_cargo: "Analista de Sistemas Judiciário", orgao: "Tribunal de Justiça de São Paulo",
+    sigla: "TJSP", uf: "SP", banca: "VUNESP", is_ti: true, escolaridade: "Superior em TI",
+    nivel: "superior", salario: "R$ 11.420,00", salarioNum: 11420, carga_horaria: "40h semanais", vagas: 6, vagas_cr: 18,
+    score: 0.78, taxa: "R$ 110,00",
+    datas: { inscricao_ini: "2026-06-10", inscricao_fim: "2026-07-08", prova: "2026-09-06", resultado: "2026-10-28" },
+    conteudo_programatico: ["Análise e projeto de sistemas", "Banco de dados Oracle e PostgreSQL", "Desenvolvimento .NET e Java", "Metodologias ágeis (Scrum, Kanban)"],
+    atribuicoes: ["Levantar requisitos e modelar sistemas", "Manter aplicações do tribunal", "Apoiar usuários internos"],
+    requisitos: "Diploma de nível superior na área de tecnologia da informação.",
+    url_edital: "#",
+  },
+  {
+    edital_id: "serpro-2026", cargo_id: "dev-pleno",
+    nome_cargo: "Analista — Desenvolvimento de Software", orgao: "SERPRO — Serviço Federal de Processamento de Dados",
+    sigla: "SERPRO", uf: "Nacional", banca: "IBFC", is_ti: true, escolaridade: "Superior em TI",
+    nivel: "superior", salario: "R$ 10.300,00", salarioNum: 10300, carga_horaria: "40h semanais", vagas: 25, vagas_cr: 50,
+    score: 0.74, taxa: "R$ 95,00",
+    datas: { inscricao_ini: "2026-07-12", inscricao_fim: "2026-08-16", prova: "2026-11-08", resultado: "2027-01-15" },
+    conteudo_programatico: ["Desenvolvimento back-end e front-end", "Arquitetura de microsserviços", "DevOps e CI/CD", "Bancos de dados e cache distribuído"],
+    atribuicoes: ["Construir e manter sistemas governamentais", "Trabalhar em squads ágeis", "Garantir qualidade e testes automatizados"],
+    requisitos: "Curso superior completo em área de tecnologia.",
+    url_edital: "#",
+  },
+  {
+    edital_id: "inss-2026", cargo_id: "tecnico-ti",
+    nome_cargo: "Técnico do Seguro Social — Suporte de TI", orgao: "Instituto Nacional do Seguro Social",
+    sigla: "INSS", uf: "Nacional", banca: "CEBRASPE", is_ti: true, escolaridade: "Médio/Técnico em Informática",
+    nivel: "tecnico", salario: "R$ 5.905,79", salarioNum: 5905, carga_horaria: "40h semanais", vagas: 40, vagas_cr: 100,
+    score: 0.66, taxa: "R$ 80,00",
+    datas: { inscricao_ini: "2026-06-25", inscricao_fim: "2026-07-30", prova: "2026-09-27", resultado: "2026-11-20" },
+    conteudo_programatico: ["Suporte a hardware e software", "Redes e manutenção de estações", "Sistemas operacionais Windows e Linux", "Atendimento ao usuário (service desk)"],
+    atribuicoes: ["Prestar suporte técnico às agências", "Manter parque tecnológico", "Registrar e resolver chamados"],
+    requisitos: "Certificado de conclusão de curso técnico em informática ou ensino médio completo.",
+    url_edital: "#",
+  },
+  {
+    edital_id: "pf-2026", cargo_id: "perito-ti",
+    nome_cargo: "Perito Criminal Federal — Informática", orgao: "Polícia Federal",
+    sigla: "PF", uf: "Nacional", banca: "CEBRASPE", is_ti: true, escolaridade: "Superior em Computação",
+    nivel: "superior", salario: "R$ 14.273,00", salarioNum: 14273, carga_horaria: "40h semanais", vagas: 4, vagas_cr: 10,
+    score: 0.71, taxa: "R$ 180,00",
+    datas: { inscricao_ini: "2026-08-01", inscricao_fim: "2026-09-05", prova: "2026-11-22", resultado: "2027-02-01" },
+    conteudo_programatico: ["Computação forense e perícia digital", "Análise de malware e engenharia reversa", "Criptografia e segurança ofensiva", "Recuperação de dados"],
+    atribuicoes: ["Realizar perícias em mídias e dispositivos", "Produzir laudos técnicos", "Apoiar investigações criminais"],
+    requisitos: "Diploma de curso superior em Computação ou Engenharia, com registro.",
+    url_edital: "#",
+  },
+  {
+    edital_id: "tcu-2026", cargo_id: "auditor-controle",
+    nome_cargo: "Auditor Federal de Controle Externo — TI", orgao: "Tribunal de Contas da União",
+    sigla: "TCU", uf: "DF", banca: "CEBRASPE", is_ti: true, escolaridade: "Superior completo",
+    nivel: "superior", salario: "R$ 19.197,06", salarioNum: 19197, carga_horaria: "40h semanais", vagas: 5, vagas_cr: 15,
+    score: 0.69, taxa: "R$ 160,00",
+    datas: { inscricao_ini: "2026-07-20", inscricao_fim: "2026-08-25", prova: "2026-10-25", resultado: "2027-01-08" },
+    conteudo_programatico: ["Auditoria de sistemas de informação", "Governança e gestão de TI", "Segurança da informação", "Análise de dados para auditoria"],
+    atribuicoes: ["Auditar a governança de TI da administração pública", "Avaliar contratos e sistemas", "Elaborar relatórios de fiscalização"],
+    requisitos: "Diploma de curso de nível superior em qualquer área.",
+    url_edital: "#",
+  },
+];
+
+const EXAMPLE_QUERIES = [
+  "desenvolvedor back-end com foco em segurança",
+  "análise de dados e python na esfera federal",
+  "infraestrutura de nuvem e kubernetes",
+  "suporte técnico nível médio em órgão nacional",
+];
+
+/* Busca semântica simulada: filtra + ordena por score, aplica filtros */
+function runSemanticSearch(query, opts = {}) {
+  const { onlyTi = false, uf = "", orgao = "", nivel = [], salarioMin = 0 } = opts;
+  let res = CARGOS.slice();
+  if (onlyTi) res = res.filter((c) => c.is_ti);
+  if (uf) res = res.filter((c) => c.uf === uf);
+  if (orgao) res = res.filter((c) => c.orgao === orgao);
+  if (nivel.length) res = res.filter((c) => nivel.includes(c.nivel));
+  if (salarioMin) res = res.filter((c) => c.salarioNum >= salarioMin);
+  // jitter de score por query para parecer semântico
+  const seed = query ? query.length : 0;
+  res = res.map((c, i) => ({ ...c, score: Math.max(0.42, Math.min(0.97, c.score - ((seed + i) % 5) * 0.012)) }));
+  return res.sort((a, b) => b.score - a.score);
+}
+
+const UF_LIST = ["DF", "SP", "RJ", "MG", "Nacional"];
+const ORGAO_LIST = [...new Set(CARGOS.map((c) => c.orgao))];
+
+const fmtDate = (iso) => {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+};
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const fmtDateShort = (iso) => { const [y, m, d] = iso.split("-"); return `${d} ${MESES[+m - 1]}`; };
+
+function cargoByIds(eid, cid) { return CARGOS.find((c) => c.edital_id === eid && c.cargo_id === cid); }
+const cargoKey = (c) => `${c.edital_id}-${c.cargo_id}`;
+
+/* ---------------- Ciclo dos concursos ---------------- */
+/* Periodicidade média por órgão e geração determinística do histórico de edições. */
+const PERIODICIDADE = {
+  TRF3: 4, BACEN: 4, RFB: 3, TJSP: 4, SERPRO: 5, INSS: 6, PF: 3, TCU: 4,
+};
+function periodicidadeLabel(cargo) {
+  const n = PERIODICIDADE[cargo.sigla] || 4;
+  return `~a cada ${n} anos`;
+}
+/* Edições anteriores (antes do edital atual de 2026). */
+function historicoOf(cargo) {
+  const span = PERIODICIDADE[cargo.sigla] || 4;
+  const out = [];
+  for (let i = 1; i <= 3; i++) {
+    const ano = 2026 - span * i;
+    out.push({
+      ano,
+      vagas: Math.max(2, cargo.vagas - i + (i % 2 === 0 ? 3 : -1)),
+      banca: i === 1 ? cargo.banca : BANCAS[(cargo.sigla.length + i) % BANCAS.length],
+    });
+  }
+  return out;
+}
+
+/* Concursos PREVISTOS / aguardando edital — o usuário pode estudar de antemão. */
+const FORECASTS = [
+  {
+    id: "rfb-auditor", orgao: "Receita Federal do Brasil", sigla: "RFB", uf: "Nacional",
+    cargo: "Auditor-Fiscal — área de Tecnologia da Informação", area: "Fiscalização e ciência de dados",
+    situacao: "autorizado", ultimo_ano: 2023, periodicidade: 3, previsao: "2º semestre de 2026",
+    banca_ant: "FGV", vagas_ant: 230, salario_ant: "R$ 22.921,71", is_ti: true,
+    nota: "Concurso autorizado pelo Ministério da Gestão; edital previsto para os próximos meses.",
+  },
+  {
+    id: "bb-ti", orgao: "Banco do Brasil", sigla: "BB", uf: "Nacional",
+    cargo: "Escriturário — Agente de Tecnologia", area: "Desenvolvimento e dados",
+    situacao: "aguardando", ultimo_ano: 2023, periodicidade: 1, previsao: "Próxima edição (histórico anual)",
+    banca_ant: "CESGRANRIO", vagas_ant: 2000, salario_ant: "R$ 3.622,23", is_ti: true,
+    nota: "Banco do Brasil costuma abrir editais com periodicidade anual para reposição de quadro.",
+  },
+  {
+    id: "dataprev-ti", orgao: "DATAPREV", sigla: "DATAPREV", uf: "Nacional",
+    cargo: "Analista de Tecnologia da Informação e Comunicação", area: "Infraestrutura e desenvolvimento",
+    situacao: "previsto", ultimo_ano: 2024, periodicidade: 3, previsao: "Estimado para 2027",
+    banca_ant: "Quadrix", vagas_ant: 90, salario_ant: "R$ 6.342,80", is_ti: true,
+    nota: "Sem autorização publicada; estimativa com base na periodicidade histórica do órgão.",
+  },
+  {
+    id: "tjsp-analista", orgao: "Tribunal de Justiça de São Paulo", sigla: "TJSP", uf: "SP",
+    cargo: "Analista de Sistemas Judiciário", area: "Sistemas e suporte",
+    situacao: "previsto", ultimo_ano: 2022, periodicidade: 4, previsao: "Estimado para 2026/2027",
+    banca_ant: "VUNESP", vagas_ant: 6, salario_ant: "R$ 11.420,00", is_ti: true,
+    nota: "Próximo ciclo se aproxima da janela histórica de 4 anos.",
+  },
+];
+const FORECAST_SITUACAO = {
+  autorizado: { label: "Autorizado", help: "Edital iminente", chip: "secondary", icon: "verified" },
+  aguardando: { label: "Aguardando edital", help: "Reedição esperada", chip: "primary", icon: "hourglass_top" },
+  previsto: { label: "Previsto", help: "Estimativa por histórico", chip: undefined, icon: "schedule" },
+};
+function forecastById(id) { return FORECASTS.find((f) => f.id === id) || null; }
+
+Object.assign(window, { PERIODICIDADE, periodicidadeLabel, historicoOf, FORECASTS, FORECAST_SITUACAO, forecastById });
+
+/* ============================================================
+   PÓS-RESULTADO — andamento de convocações
+   "Como se" houvesse uma API oficial (Diário Oficial / portais de
+   transparência) que o gFind consulta periodicamente e atualiza sozinho
+   o andamento das nomeações/convocações de cada concurso já homologado.
+   ============================================================ */
+const RESULT_NOW = "2026-06-16";
+const RESULTADOS = [
+  {
+    id: "trf3-ti-2024", orgao: "Tribunal Regional Federal da 3ª Região", sigla: "TRF3", uf: "SP",
+    cargo: "Analista Judiciário — Tecnologia da Informação", banca: "FGV", is_ti: true, ano: 2024,
+    classificados: 184, vagas: 12, vagas_cr: 30, colocacao: 9, nota: 84.5, nota_corte: 78.0,
+    homologacao: "2024-05-20", validade_meses: 24, prorrogavel: true, prorrogado: false,
+    fonte: "Diário Eletrônico da Justiça Federal da 3ª Região", sync_horas: 5,
+    convocacoes: [
+      { data: "2024-06-18", ate: 12, qtd: 12, tipo: "Nomeação — vagas imediatas" },
+    ],
+  },
+  {
+    id: "inss-ti-2023", orgao: "Instituto Nacional do Seguro Social", sigla: "INSS", uf: "Nacional",
+    cargo: "Técnico do Seguro Social — Suporte de TI", banca: "CEBRASPE", is_ti: true, ano: 2023,
+    classificados: 412, vagas: 40, vagas_cr: 100, colocacao: 47, nota: 71.0, nota_corte: 68.5,
+    homologacao: "2023-08-10", validade_meses: 24, prorrogavel: true, prorrogado: true,
+    fonte: "Diário Oficial da União", sync_horas: 2,
+    convocacoes: [
+      { data: "2023-09-12", ate: 40, qtd: 40, tipo: "Nomeação — vagas imediatas" },
+      { data: "2024-03-05", ate: 43, qtd: 3, tipo: "Convocação — cadastro de reserva" },
+      { data: "2025-01-22", ate: 45, qtd: 2, tipo: "Convocação — cadastro de reserva" },
+    ],
+  },
+  {
+    id: "serpro-dev-2023", orgao: "SERPRO — Serviço Federal de Processamento de Dados", sigla: "SERPRO", uf: "Nacional",
+    cargo: "Analista — Desenvolvimento de Software", banca: "IBFC", is_ti: true, ano: 2023,
+    classificados: 305, vagas: 25, vagas_cr: 50, colocacao: 73, nota: 62.0, nota_corte: 70.5,
+    homologacao: "2023-03-15", validade_meses: 24, prorrogavel: true, prorrogado: true,
+    fonte: "Diário Oficial da União", sync_horas: 8,
+    convocacoes: [
+      { data: "2023-04-10", ate: 25, qtd: 25, tipo: "Nomeação — vagas imediatas" },
+      { data: "2023-11-28", ate: 34, qtd: 9, tipo: "Convocação — cadastro de reserva" },
+      { data: "2024-09-16", ate: 41, qtd: 7, tipo: "Convocação — cadastro de reserva" },
+    ],
+  },
+];
+
+function addMonthsIso(iso, months) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1 + months, d);
+  return dt.toISOString().slice(0, 10);
+}
+function mesesEntre(aIso, bIso) {
+  const a = new Date(aIso + "T00:00:00"), b = new Date(bIso + "T00:00:00");
+  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) - (b.getDate() < a.getDate() ? 1 : 0);
+}
+function fmtMesAno(iso) { const [y, m] = iso.split("-"); return `${MESES[+m - 1].toLowerCase()}/${y}`; }
+function fmtDataConv(iso) { return `${fmtDateShort(iso)} ${iso.slice(0, 4)}`; }
+
+/* Deriva o estado da fila a partir das convocações já publicadas + validade. */
+function resultStatus(r) {
+  const convocados = r.convocacoes.reduce((mx, c) => Math.max(mx, c.ate), 0);
+  const totalNomeavel = r.vagas + r.vagas_cr;
+  const dentroVagas = r.colocacao <= r.vagas;
+  const emReserva = !dentroVagas && r.colocacao <= totalNomeavel;
+  const convocado = convocados >= r.colocacao;
+  const faltam = Math.max(0, r.colocacao - convocados);
+  const callLot = r.convocacoes.filter((c) => c.ate >= r.colocacao).sort((a, b) => a.data.localeCompare(b.data))[0] || null;
+  const valBase = addMonthsIso(r.homologacao, r.validade_meses);
+  const validadeFim = r.prorrogado ? addMonthsIso(valBase, r.validade_meses) : valBase;
+  const mesesRest = Math.max(0, mesesEntre(RESULT_NOW, validadeFim));
+  let estado;
+  if (convocado) estado = "convocado";
+  else if (faltam <= 3) estado = "chegando";
+  else if (mesesRest <= 10) estado = "prazo";
+  else estado = "aguardando";
+  return { convocados, totalNomeavel, dentroVagas, emReserva, convocado, faltam, callLot, validadeFim, mesesRest, estado };
+}
+
+Object.assign(window, {
+  RESULT_NOW, RESULTADOS, resultStatus, addMonthsIso, mesesEntre, fmtMesAno, fmtDataConv,
+});
+
+Object.assign(window, {
+  CARGOS, BANCAS, EXAMPLE_QUERIES, UF_LIST, ORGAO_LIST,
+  orgaoColor, orgaoInitials, runSemanticSearch, fmtDate, fmtDateShort, MESES,
+  cargoByIds, cargoKey,
+});
+
+  </script>
+
+  <!-- store.jsx -->
+  <script type="text/babel">
+/* global React, cargoKey */
+const { createContext: createCtx, useContext: useCtx, useState: useS, useEffect: useE, useCallback, useRef: useR } = React;
+
+const AppCtx = createCtx(null);
+const useApp = () => useCtx(AppCtx);
+
+const LS_KEY = "gfind_state_v2";
+const DEFAULT_STATE = {
+  loggedIn: false,
+  user: { nome: "Camila Andrade", email: "camila.andrade@email.com", iniciais: "CA" },
+  profile: {
+    formacao: "Superior — Ciência da Computação",
+    nivel: "superior",
+    areas: ["Desenvolvimento de software", "Segurança da informação"],
+    ufs: ["SP", "Nacional"],
+    salarioMin: 8000,
+    onboarded: true,
+  },
+  favorites: ["bacen-2026-analista-infra", "rfb-2026-auditor-ti"],
+  tracking: {
+    "trf3-2026-analista-ti": "inscrito",
+    "serpro-2026-dev-pleno": "inscrito",
+    "bacen-2026-analista-infra": "quero",
+    "tcu-2026-auditor-controle": "quero",
+  },
+  // Estudar é contínuo: um marcador independente da etapa do processo (vale em qualquer coluna).
+  studyMark: {
+    "trf3-2026-analista-ti": { desde: "2026-02-15" },
+    "serpro-2026-dev-pleno": { desde: "2026-04-22" },
+    "bacen-2026-analista-infra": { desde: "2026-03-10" },
+  },
+  alerts: [
+    { id: "al1", nome: "Dev back-end federal", query: "desenvolvedor back-end segurança", onlyTi: true, uf: "Nacional", freq: "diario", ativo: true, novos: 3 },
+    { id: "al2", nome: "Infra & nuvem DF", query: "infraestrutura nuvem kubernetes", onlyTi: true, uf: "DF", freq: "semanal", ativo: true, novos: 0 },
+  ],
+  calendar: ["trf3-2026-analista-ti", "serpro-2026-dev-pleno"],
+  studying: {            // forecastId -> { desde: ISO } : concursos previstos que o usuário estuda de antemão
+    "rfb-auditor": { desde: "2026-02-10" },
+    "tjsp-analista": { desde: "2026-04-22" },
+  },
+  history: ["análise de dados python federal", "infraestrutura de nuvem e kubernetes"],
+  resultNotify: { "inss-ti-2023": true }, // avisar quando a fila se aproximar (pós-resultado)
+};
+
+/* Migração: o modelo antigo tinha "estudando" como etapa. Agora vira "inscrito" + marcador de estudo. */
+function migrateState(s) {
+  if (!s) return s;
+  if (!s.studyMark) s.studyMark = {};
+  if (s.tracking) {
+    const t = { ...s.tracking };
+    let changed = false;
+    Object.keys(t).forEach((k) => {
+      if (t[k] === "estudando") {
+        t[k] = "inscrito";
+        if (!s.studyMark[k]) s.studyMark[k] = { desde: "2026-04-01" };
+        changed = true;
+      }
+    });
+    if (changed) s.tracking = t;
+  }
+  return s;
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return migrateState({ ...DEFAULT_STATE, ...JSON.parse(raw) });
+  } catch (e) { /* ignore */ }
+  return DEFAULT_STATE;
+}
+
+function AppProvider({ children }) {
+  const [state, setState] = useS(loadState);
+  const [route, setRoute] = useS(() => {
+    const s = loadState();
+    return s.loggedIn ? { name: "home" } : { name: "auth", params: { mode: "login" } };
+  });
+  const [toast, setToast] = useS(null);
+  const toastTimer = useR(null);
+
+  useE(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }, [state]);
+
+  const navigate = useCallback((name, params = {}) => {
+    setRoute({ name, params });
+    const main = document.querySelector(".content-scroll");
+    if (main) main.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }, []);
+
+  const showToast = useCallback((msg, action) => {
+    setToast({ msg, action });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4200);
+  }, []);
+
+  const patch = useCallback((upd) => setState((s) => ({ ...s, ...upd })), []);
+
+  const toggleFavorite = useCallback((c) => {
+    const k = cargoKey(c);
+    setState((s) => {
+      const has = s.favorites.includes(k);
+      return { ...s, favorites: has ? s.favorites.filter((x) => x !== k) : [k, ...s.favorites] };
+    });
+  }, []);
+
+  const setTracking = useCallback((c, status) => {
+    const k = cargoKey(c);
+    setState((s) => {
+      const next = { ...s.tracking };
+      if (status === null) delete next[k]; else next[k] = status;
+      return { ...s, tracking: next };
+    });
+  }, []);
+
+  const toggleCalendar = useCallback((c) => {
+    const k = cargoKey(c);
+    setState((s) => {
+      const has = s.calendar.includes(k);
+      return { ...s, calendar: has ? s.calendar.filter((x) => x !== k) : [k, ...s.calendar] };
+    });
+  }, []);
+
+  const toggleStudyMark = useCallback((c) => {
+    const k = cargoKey(c);
+    setState((s) => {
+      const next = { ...(s.studyMark || {}) };
+      if (next[k]) delete next[k];
+      else next[k] = { desde: new Date().toISOString().slice(0, 10) };
+      return { ...s, studyMark: next };
+    });
+  }, []);
+
+  const toggleResultNotify = useCallback((id) => {
+    setState((s) => {
+      const next = { ...(s.resultNotify || {}) };
+      if (next[id]) delete next[id]; else next[id] = true;
+      return { ...s, resultNotify: next };
+    });
+  }, []);
+
+  const toggleStudying = useCallback((forecastId, desde) => {
+    setState((s) => {
+      const next = { ...s.studying };
+      if (next[forecastId]) delete next[forecastId];
+      else next[forecastId] = { desde: desde || new Date().toISOString().slice(0, 10) };
+      return { ...s, studying: next };
+    });
+  }, []);
+
+  const pushHistory = useCallback((q) => {
+    setState((s) => ({ ...s, history: [q, ...s.history.filter((x) => x !== q)].slice(0, 8) }));
+  }, []);
+  const clearHistory = useCallback(() => setState((s) => ({ ...s, history: [] })), []);
+
+  const addAlert = useCallback((alert) => {
+    setState((s) => ({ ...s, alerts: [{ id: "al" + Date.now(), novos: 0, ativo: true, ...alert }, ...s.alerts] }));
+  }, []);
+  const updateAlert = useCallback((id, upd) => {
+    setState((s) => ({ ...s, alerts: s.alerts.map((a) => (a.id === id ? { ...a, ...upd } : a)) }));
+  }, []);
+  const removeAlert = useCallback((id) => {
+    setState((s) => ({ ...s, alerts: s.alerts.filter((a) => a.id !== id) }));
+  }, []);
+
+  const login = useCallback(() => { patch({ loggedIn: true }); navigate("home"); }, []);
+  const logout = useCallback(() => { patch({ loggedIn: false }); setRoute({ name: "auth", params: { mode: "login" } }); }, []);
+
+  const value = {
+    state, route, navigate, toast, showToast, patch,
+    toggleFavorite, setTracking, toggleCalendar, toggleStudying, toggleStudyMark, toggleResultNotify,
+    pushHistory, clearHistory, addAlert, updateAlert, removeAlert, login, logout,
+    isFav: (c) => state.favorites.includes(cargoKey(c)),
+    trackOf: (c) => state.tracking[cargoKey(c)] || null,
+    inCalendar: (c) => state.calendar.includes(cargoKey(c)),
+    isStudying: (id) => !!state.studying[id],
+    isStudyMarked: (c) => !!(state.studyMark || {})[cargoKey(c)],
+    studyMarkInfo: (c) => (state.studyMark || {})[cargoKey(c)] || null,
+    isResultNotify: (id) => !!(state.resultNotify || {})[id],
+  };
+  return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
+}
+
+const TRACK_LABELS = {
+  quero: "Quero fazer", inscrito: "Inscrito", aguardando: "Aguardando resultado", feito: "Concluído",
+};
+const TRACK_ICONS = {
+  quero: "bookmark_add", inscrito: "how_to_reg", aguardando: "hourglass_top", feito: "task_alt",
+};
+const TRACK_ORDER = ["quero", "inscrito", "aguardando", "feito"];
+
+Object.assign(window, { AppCtx, useApp, AppProvider, TRACK_LABELS, TRACK_ICONS, TRACK_ORDER });
+
+  </script>
+
+  <!-- shell.jsx -->
+  <script type="text/babel">
+/* global React, Icon, Button, IconButton, Chip, Avatar, RelevanceBar, Menu, MenuItem, TextField, Switch,
+   useApp, orgaoColor, orgaoInitials, TRACK_LABELS, TRACK_ICONS, cargoKey */
+const { useState: uS, useRef: uR } = React;
+
+/* ---------------- Logo ---------------- */
+function Logo({ size = "lg", onClick }) {
+  const lg = size === "lg";
+  return (
+    <span className="row" style={{ gap: lg ? 12 : 8, cursor: onClick ? "pointer" : "default" }} onClick={onClick}>
+      <Icon name="travel_explore" size={lg ? 44 : 28} className="text-primaryc" />
+      <span className={lg ? "t-h3" : "t-h5"} style={{ fontWeight: 700, letterSpacing: "-0.02em" }}>
+        g<span className="text-primaryc">Find</span>
+      </span>
+    </span>
+  );
+}
+
+/* ---------------- OrgaoIcon ---------------- */
+const ORGAO_LOGOS = {
+  BACEN:  "../uploads/logo_bacen.png",
+  RFB:    "../uploads/logo_receita.svg",
+  SERPRO: "../uploads/logo_serpro.png",
+  TCU:    "../uploads/logo_tcu.png",
+  TRF3:   "../uploads/Logo_trf3.png",
+  TJSP:   "../uploads/logo_tjsp.png",
+  PF:     "../uploads/logo_policia_federal.png",
+};
+
+function OrgaoIcon({ orgao, sigla, size = 44 }) {
+  const logo = sigla && ORGAO_LOGOS[sigla];
+  if (logo) {
+    return (
+      <span style={{
+        width: size, height: size, borderRadius: "50%",
+        background: "#fff", border: "1px solid var(--divider)",
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, overflow: "hidden",
+      }}>
+        <img src={logo} alt={sigla} style={{ width: "82%", height: "82%", objectFit: "contain" }} />
+      </span>
+    );
+  }
+  return (
+    <Avatar size={size} color={orgaoColor(orgao)} style={{ fontWeight: 700, letterSpacing: "-.02em", fontSize: size * 0.32 }}>
+      {sigla ? sigla.slice(0, 4) : orgaoInitials(orgao)}
+    </Avatar>
+  );
+}
+
+/* ---------------- SearchBar ---------------- */
+function SearchBar({ initialQuery = "", initialOnlyTi = false, hero = false, compact = false, autoFocus = false, onSearch }) {
+  const [q, setQ] = uS(initialQuery);
+  const [onlyTi, setOnlyTi] = uS(initialOnlyTi);
+  const MAX = 280;
+  const trimmed = q.trim();
+  const tooLong = q.length > MAX;
+  const canSubmit = trimmed.length > 0 && !tooLong;
+  const submit = () => { if (canSubmit) onSearch(trimmed, onlyTi); };
+
+  const pill = (
+    <div className={["searchbar", hero ? "hero" : ""].filter(Boolean).join(" ")} style={compact ? { flex: 1, boxShadow: "var(--e1)" } : undefined}>
+      <Icon name="search" size={hero ? 26 : 22} className="text-secondary" />
+      <textarea
+        rows={1} value={q} autoFocus={autoFocus}
+        placeholder={hero ? "Descreva o cargo: tecnologias, atividades ou título…" : "Refinar busca…"}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+      />
+      {q && <IconButton name="close" size={20} btnSize="sm" onClick={() => setQ("")} aria-label="Limpar" type="button" />}
+      <IconButton name="arrow_forward" onClick={submit} disabled={!canSubmit}
+        aria-label="Buscar" type="submit"
+        style={{ background: canSubmit ? "var(--primary)" : "var(--bg-sunken)", color: canSubmit ? "#fff" : "var(--text-disabled)" }} />
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="row gap-1" style={{ alignItems: "center" }}>
+        {pill}
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
+      {pill}
+      <div className="row" style={{ marginTop: hero ? 14 : 8, padding: "0 8px", justifyContent: "flex-end" }}>
+        <span className="t-cap" style={{ color: tooLong ? "var(--error)" : "var(--text-secondary)" }}>
+          {tooLong ? `Máximo de ${MAX} caracteres` : `${q.length}/${MAX}`}
+        </span>
+      </div>
+    </form>
+  );
+}
+
+/* ---------------- AppBar ---------------- */
+/* ---------------- Notifications center ---------------- */
+function buildNotifications(state, isResultNotify) {
+  const items = [];
+  // Acompanhamento — convocações se aproximando (pós-resultado)
+  (window.RESULTADOS || []).forEach((r) => {
+    const st = window.resultStatus(r);
+    if (st.estado === "chegando" && isResultNotify(r.id)) {
+      items.push({
+        id: "conv-" + r.id, tone: "warn", icon: "notifications_active",
+        title: `Convocação chegando — ${r.sigla}`,
+        text: `Faltam ${st.faltam} ${st.faltam === 1 ? "posição" : "posições"} para a sua vez em ${r.cargo}.`,
+        when: `há ${r.sync_horas}h`,
+        route: { name: "tracking", params: { tab: "resultados" } },
+      });
+    }
+  });
+  // Alertas — novos editais compatíveis
+  (state.alerts || []).forEach((al) => {
+    if (al.ativo && al.novos > 0) {
+      items.push({
+        id: "al-" + al.id, tone: "primary", icon: "campaign",
+        title: `${al.novos} ${al.novos > 1 ? "novos editais compatíveis" : "novo edital compatível"}`,
+        text: `Do seu alerta “${al.nome || al.query}”.`,
+        when: "hoje",
+        route: { name: "results", params: { q: al.query, ti: al.onlyTi }, clearAlert: al.id },
+      });
+    }
+  });
+  // Aguardando edital — concursos estudados cujo edital foi autorizado
+  const studyingIds = Object.keys(state.studying || {});
+  (window.FORECASTS || []).forEach((f) => {
+    if (studyingIds.includes(f.id) && f.situacao === "autorizado") {
+      items.push({
+        id: "fc-" + f.id, tone: "secondary", icon: "verified",
+        title: `Edital autorizado — ${f.sigla}`,
+        text: `${f.cargo}. Previsão: ${f.previsao}.`,
+        when: "há 1 dia",
+        route: { name: "tracking", params: { tab: "previstos" } },
+      });
+    }
+  });
+  return items;
+}
+
+function NotificationsPanel({ open, onClose, anchorRef }) {
+  const { state, navigate, isResultNotify, updateAlert } = useApp();
+  const items = buildNotifications(state, isResultNotify);
+  const go = (it) => {
+    onClose();
+    if (it.route.clearAlert) updateAlert(it.route.clearAlert, { novos: 0 });
+    navigate(it.route.name, it.route.params);
+  };
+  return (
+    <Menu open={open} onClose={onClose} anchorRef={anchorRef} align="right" width={384}>
+      <div className="notif-head row spread">
+        <span className="t-sub1" style={{ fontWeight: 600 }}>Notificações</span>
+        {items.length > 0 && <span className="t-cap text-secondary">{items.length} nova{items.length > 1 ? "s" : ""}</span>}
+      </div>
+      <div className="divider" />
+      {items.length === 0 ? (
+        <div className="notif-empty col center">
+          <Icon name="notifications_none" size={36} />
+          <span className="t-body2 text-secondary" style={{ marginTop: 8 }}>Você está em dia.</span>
+        </div>
+      ) : (
+        <div className="notif-list">
+          {items.map((it) => (
+            <button key={it.id} className="notif-item" onClick={() => go(it)}>
+              <span className={`notif-ic tone-${it.tone}`}><Icon name={it.icon} size={20} /></span>
+              <span className="notif-body">
+                <span className="notif-title">{it.title}</span>
+                <span className="notif-text">{it.text}</span>
+                <span className="notif-when">{it.when}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Menu>
+  );
+}
+
+function AppBar({ showSearch, searchProps }) {
+  const { state, navigate, logout, route, isResultNotify } = useApp();
+  const [menuOpen, setMenuOpen] = uS(false);
+  const [notifOpen, setNotifOpen] = uS(false);
+  const avatarRef = uR(null);
+  const bellRef = uR(null);
+  const notifCount = buildNotifications(state, isResultNotify).length;
+
+  return (
+    <header className="appbar">
+      <span className="row" style={{ gap: 4, paddingLeft: 8, cursor: "pointer" }} onClick={() => navigate("home")}>
+        <Icon name="travel_explore" size={30} className="text-primaryc" />
+        <span className="t-h6" style={{ fontWeight: 700, letterSpacing: "-.02em" }}>g<span className="text-primaryc">Find</span></span>
+      </span>
+      {showSearch && <div className="search-slot" style={{ marginLeft: 16 }}><SearchBar {...searchProps} /></div>}
+      <div className="grow" />
+      <div style={{ position: "relative" }} ref={bellRef}>
+        <IconButton name="notifications" onClick={() => setNotifOpen((v) => !v)} aria-label="Notificações" />
+        {notifCount > 0 && <span className="notif-count">{notifCount}</span>}
+      </div>
+      <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={bellRef} />
+      <button className="icon-btn" ref={avatarRef} onClick={() => setMenuOpen((v) => !v)} aria-label="Conta" style={{ width: 40, height: 40 }}>
+        <Avatar size={32} round color="var(--secondary)" style={{ fontSize: 14 }}>{state.user.iniciais}</Avatar>
+      </button>
+      <Menu open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={avatarRef} width={240}>
+        <div style={{ padding: "8px 16px 12px" }}>
+          <div className="t-sub2">{state.user.nome}</div>
+          <div className="t-cap text-secondary truncate">{state.user.email}</div>
+        </div>
+        <div className="divider" />
+        <MenuItem icon="account_circle" onClick={() => { setMenuOpen(false); navigate("profile"); }}>Meu perfil</MenuItem>
+        <MenuItem icon="bookmark" onClick={() => { setMenuOpen(false); navigate("saved"); }}>Editais Salvos</MenuItem>
+        <MenuItem icon="checklist" onClick={() => { setMenuOpen(false); navigate("tracking"); }}>Acompanhamento</MenuItem>
+        <div className="divider" />
+        <MenuItem icon="help" onClick={() => { setMenuOpen(false); navigate("help"); }}>Ajuda</MenuItem>
+        <MenuItem icon="logout" onClick={() => { setMenuOpen(false); logout(); }} danger>Sair</MenuItem>
+      </Menu>
+    </header>
+  );
+}
+
+/* ---------------- Navigation rail ---------------- */
+function Rail() {
+  const { state, route, navigate, isResultNotify } = useApp();
+  const here = route.name;
+  const trackingNewCount = buildNotifications(state, isResultNotify).filter((n) => n.route?.name === "tracking").length;
+  const alertNovos = state.alerts.reduce((a, x) => a + (x.ativo ? x.novos : 0), 0);
+  const items = [
+    { name: "home", icon: "search", label: "Buscar Editais" },
+    { name: "saved", icon: "bookmark", label: "Editais Salvos" },
+    { name: "tracking", icon: "checklist", label: "Acompanhamento", badge: trackingNewCount || null },
+    { name: "alerts", icon: "notifications", label: "Alertas", badge: alertNovos || null },
+    { name: "calendar", icon: "calendar_month", label: "Calendário" },
+  ];
+  const active = (n) => here === n || (n === "home" && here === "results");
+  return (
+    <nav className="rail">
+      {items.map((it) => (
+        <button key={it.name} className={["nav-item", active(it.name) ? "active" : ""].filter(Boolean).join(" ")} onClick={() => navigate(it.name)}>
+          <Icon name={it.icon} size={22} fill={active(it.name)} />
+          <span>{it.label}</span>
+          {it.badge ? <span className="badge-count">{it.badge}</span> : null}
+        </button>
+      ))}
+      <div className="divider" style={{ margin: "14px 8px" }} />
+      <button className={["nav-item", here === "profile" ? "active" : ""].filter(Boolean).join(" ")} onClick={() => navigate("profile")}>
+        <Icon name="account_circle" size={22} fill={here === "profile"} /><span>Meu perfil</span>
+      </button>
+      <button className={["nav-item", here === "help" ? "active" : ""].filter(Boolean).join(" ")} onClick={() => navigate("help")}>
+        <Icon name="help" size={22} fill={here === "help"} /><span>Ajuda</span>
+      </button>
+    </nav>
+  );
+}
+
+/* ---------------- Quick actions on a result (fav, compare, track) ---------------- */
+function CardActions({ cargo, onCompare, compareOn, compact, favCtl }) {
+  const { isFav, toggleFavorite, trackOf, setTracking, showToast } = useApp();
+  const [trackMenu, setTrackMenu] = uS(false);
+  const trackRef = uR(null);
+  const fav = favCtl ? !favCtl.pending : isFav(cargo);
+  const track = trackOf(cargo);
+  const onFav = favCtl
+    ? favCtl.onToggle
+    : () => { const was = isFav(cargo); toggleFavorite(cargo); showToast(was ? "Removido dos salvos" : "Adicionado aos salvos"); };
+  return (
+    <div className="row gap-half" onClick={(e) => e.stopPropagation()}>
+      <IconButton name={fav ? "favorite" : "favorite_border"} fill={fav} size={22} btnSize="sm"
+        className={fav ? "active-fav" : ""} aria-label={favCtl && favCtl.pending ? "Desfazer remoção" : "Favoritar"}
+        onClick={onFav} />
+      {onCompare && (
+        <IconButton name={compareOn ? "library_add_check" : "library_add"} fill={compareOn} size={22} btnSize="sm"
+          className={compareOn ? "text-primaryc" : ""} aria-label="Comparar" onClick={() => onCompare(cargo)} />
+      )}
+      <div style={{ position: "relative" }} ref={trackRef}>
+        <IconButton name={track ? TRACK_ICONS[track] : "playlist_add"} size={22} btnSize="sm"
+          className={track ? "text-secondaryc" : ""} aria-label="Acompanhar" onClick={() => setTrackMenu((v) => !v)} />
+        <Menu open={trackMenu} onClose={() => setTrackMenu(false)} anchorRef={trackRef} align="right" width={200}>
+          {Object.keys(TRACK_LABELS).map((k) => (
+            <MenuItem key={k} icon={TRACK_ICONS[k]} onClick={() => { setTracking(cargo, k); setTrackMenu(false); showToast(`Movido para "${TRACK_LABELS[k]}"`); }}>
+              {TRACK_LABELS[k]}
+            </MenuItem>
+          ))}
+          {track && <><div className="divider" /><MenuItem icon="remove_circle_outline" danger onClick={() => { setTracking(cargo, null); setTrackMenu(false); showToast("Removido do acompanhamento"); }}>Remover</MenuItem></>}
+        </Menu>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { Logo, OrgaoIcon, SearchBar, AppBar, Rail, CardActions });
+
+  </script>
+
+  <!-- screens-search.jsx -->
+  <script type="text/babel">
+/* global React, Icon, Button, IconButton, Chip, Card, TextField, Select, Switch, ToggleGroup,
+   RelevanceBar, Skeleton, InlineAlert, useApp, OrgaoIcon, SearchBar, CardActions, Logo,
+   runSemanticSearch, EXAMPLE_QUERIES, UF_LIST, ORGAO_LIST, fmtDateShort, cargoKey, TRACK_LABELS, TRACK_ICONS */
+const { useState: rS, useEffect: rE, useRef: rR } = React;
+
+/* ---------------- ResultCard ---------------- */
+function ResultCard({ cargo, onOpen, onCompare, compareOn, defaultExpanded, savedCtl }) {
+  const [exp, setExp] = rS(!!defaultExpanded);
+  const { trackOf } = useApp();
+  const track = trackOf(cargo);
+  const pending = !!(savedCtl && savedCtl.pending);
+  return (
+    <Card className="fade-in" style={pending ? { borderColor: "var(--divider)", boxShadow: "none" } : undefined}>
+      <div className="card-body" style={{ paddingBottom: exp ? 4 : 20, opacity: pending ? 0.45 : 1, transition: "opacity .2s" }}>
+        <div className="row" style={{ gap: 16, alignItems: "flex-start" }}>
+          <OrgaoIcon orgao={cargo.orgao} sigla={cargo.sigla} size={48} />
+          <div className="grow">
+            <div className="row spread" style={{ gap: 16, alignItems: "flex-start" }}>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div className="row wrap gap-1" style={{ rowGap: 4 }}>
+                  <span className="t-h6" style={{ cursor: "pointer", textDecoration: pending ? "line-through" : "none" }} onClick={() => !pending && onOpen(cargo)}>{cargo.nome_cargo}</span>
+                  {track && <Chip label={TRACK_LABELS[track]} icon={TRACK_ICONS[track]} size="sm" color="secondary" />}
+                </div>
+                <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>{cargo.orgao}</div>
+              </div>
+              <div className="col" style={{ alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+                <RelevanceBar score={cargo.score} />
+                <CardActions cargo={cargo} onCompare={onCompare} compareOn={compareOn} favCtl={savedCtl} />
+              </div>
+            </div>
+            <div className="row wrap" style={{ gap: 18, marginTop: 12, color: "var(--text-secondary)" }}>
+              <span className="row gap-half t-body2"><Icon name="payments" size={18} />{cargo.salario}</span>
+              <span className="row gap-half t-body2"><Icon name="schedule" size={18} />{cargo.carga_horaria}</span>
+              <span className="row gap-half t-body2"><Icon name="groups" size={18} />{cargo.vagas} vagas + CR</span>
+              <span className="row gap-half t-body2"><Icon name="how_to_reg" size={18} />Inscrições até {fmtDateShort(cargo.datas.inscricao_fim)}</span>
+              <span className="row gap-half t-body2"><Icon name="gavel" size={18} />{cargo.banca}</span>
+            </div>
+          </div>
+        </div>
+
+        {exp && !pending && (
+          <div className="fade-in" style={{ paddingLeft: 64, marginTop: 16 }}>
+            <div className="divider" style={{ marginBottom: 16 }} />
+            <DetailBlock icon="school" title="Escolaridade"><div className="t-body2 text-secondary">{cargo.escolaridade}</div></DetailBlock>
+            <DetailList icon="menu_book" title="Conteúdo programático" items={cargo.conteudo_programatico} />
+            <DetailList icon="assignment" title="Atribuições" items={cargo.atribuicoes} />
+            <div className="row gap-1" style={{ marginTop: 4 }}>
+              <Button variant="contained" size="sm" startIcon="open_in_full" onClick={() => onOpen(cargo)}>Ver edital completo</Button>
+              <Button variant="outlined" size="sm" endIcon="open_in_new">Edital original (PDF)</Button>
+            </div>
+          </div>
+        )}
+      </div>
+      {pending ? (
+        <div className="row spread" style={{ padding: "10px 20px 12px", borderTop: "1px solid var(--divider)", gap: 12 }}>
+          <span className="row gap-half t-body2 text-secondary"><Icon name="heart_broken" size={18} />Será removido ao sair de “Salvos”</span>
+          <Button variant="text" size="sm" startIcon="undo" onClick={savedCtl.onToggle}>Desfazer</Button>
+        </div>
+      ) : (
+        <button className="row center" onClick={() => setExp((v) => !v)}
+          style={{ width: "100%", border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "8px 0 12px", gap: 4, fontFamily: "inherit", fontSize: ".8rem" }}>
+          {exp ? "Recolher" : "Ver detalhes"}
+          <Icon name="expand_more" size={20} style={{ transform: exp ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+        </button>
+      )}
+    </Card>
+  );
+}
+function DetailBlock({ icon, title, children }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="row gap-half" style={{ marginBottom: 6 }}><Icon name={icon} size={18} className="text-secondary" /><span className="t-sub2">{title}</span></div>
+      {children}
+    </div>
+  );
+}
+function DetailList({ icon, title, items }) {
+  if (!items || !items.length) return null;
+  return (
+    <DetailBlock icon={icon} title={title}>
+      <ul style={{ margin: 0, paddingLeft: 20 }}>
+        {items.map((it, i) => <li key={i} className="t-body2 text-secondary" style={{ marginBottom: 3 }}>{it}</li>)}
+      </ul>
+    </DetailBlock>
+  );
+}
+
+/* ---------------- FilterPanel ---------------- */
+function FilterPanel({ filters, onChange, count }) {
+  const has = !!(filters.uf || filters.orgao || filters.nivel.length || filters.salarioMin);
+  const [sal, setSal] = rS(filters.salarioMin ? String(filters.salarioMin) : "");
+  rE(() => setSal(filters.salarioMin ? String(filters.salarioMin) : ""), [filters.salarioMin]);
+  const commitSal = () => { const n = Number(sal.replace(/\D/g, "")) || 0; if (n !== filters.salarioMin) onChange({ ...filters, salarioMin: n }); };
+  return (
+    <Card flat style={{ marginBottom: 20, background: "var(--paper)", boxShadow: "var(--e1)", borderColor: "transparent" }}>
+      <div className="card-pad-sm">
+        <div className="row gap-half" style={{ marginBottom: 14 }}>
+          <Icon name="tune" size={20} className="text-secondary" /><span className="t-sub2">Filtros</span>
+          {count != null && count > 0 && <span className="t-cap text-secondary" style={{ marginLeft: 4 }}>· {count} resultado{count !== 1 ? "s" : ""}</span>}
+          {has && <Button variant="text" size="sm" className="neutral" startIcon="clear_all" style={{ marginLeft: "auto" }}
+            onClick={() => onChange({ uf: "", orgao: "", nivel: [], salarioMin: 0 })}>Limpar</Button>}
+        </div>
+        <div className="row wrap" style={{ gap: 16, alignItems: "flex-end" }}>
+          <Select label="UF" value={filters.uf} onChange={(e) => onChange({ ...filters, uf: e.target.value })} className="" >
+            <option value="">Todas</option>
+            {UF_LIST.map((u) => <option key={u} value={u}>{u}</option>)}
+          </Select>
+          <div style={{ flex: "1 1 240px", minWidth: 200 }}>
+            <Select label="Órgão" value={filters.orgao} onChange={(e) => onChange({ ...filters, orgao: e.target.value })}>
+              <option value="">Todos</option>
+              {ORGAO_LIST.map((o) => <option key={o} value={o}>{o}</option>)}
+            </Select>
+          </div>
+          <TextField label="Salário mínimo" value={sal} icon="payments" placeholder="0"
+            onChange={(e) => setSal(e.target.value)} onBlur={commitSal} onKeyDown={(e) => { if (e.key === "Enter") commitSal(); }}
+            inputMode="numeric" className="" />
+          <div className="field" style={{ flexShrink: 0 }}>
+            <label>Escolaridade</label>
+            <ToggleGroup multiple value={filters.nivel} onChange={(v) => onChange({ ...filters, nivel: v })}
+              options={[{ value: "medio", label: "Médio" }, { value: "tecnico", label: "Técnico" }, { value: "superior", label: "Superior" }]} />
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* commit salário fix: bind blur */
+const _origFilterPanel = FilterPanel;
+
+/* ---------------- HomePage (search landing, logged in) ---------------- */
+function HomePage() {
+  const { state, navigate, pushHistory, patch } = useApp();
+  const run = (q, ti) => { pushHistory(q); navigate("results", { q, ti }); };
+  const recs = runSemanticSearch("", { nivel: [state.profile.nivel] }).slice(0, 3);
+  const firstName = state.user.nome.split(" ")[0];
+
+  return (
+    <div className="page" style={{ paddingTop: 40 }}>
+      {state.profile.areas.length === 0 && !state.profile.dismissedResidual && (
+        <div className="residual-card">
+          <Icon name="person_add" size={28} className="text-primaryc" style={{ flexShrink: 0 }} />
+          <div className="grow">
+            <div className="t-sub1">Complete seu perfil</div>
+            <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>Adicione suas áreas de interesse para receber recomendações personalizadas.</div>
+          </div>
+          <Button variant="outlined" size="sm" onClick={() => navigate("profile")}>Completar</Button>
+          <IconButton name="close" size={18} btnSize="sm" aria-label="Dispensar" onClick={() => patch({ profile: { ...state.profile, dismissedResidual: true } })} />
+        </div>
+      )}
+      <div className="col center" style={{ textAlign: "center", marginBottom: 8 }}>
+        <Logo size="lg" />
+        <p className="t-h6 text-secondary" style={{ fontWeight: 400, maxWidth: 580, margin: "16px auto 0" }}>
+          Olá, {firstName}. Descreva o perfil da vaga em linguagem natural e encontre cargos de TI nos editais.
+        </p>
+      </div>
+
+      <div style={{ maxWidth: 720, margin: "28px auto 0" }}>
+        <SearchBar hero autoFocus onSearch={run} />
+      </div>
+
+      <div style={{ maxWidth: 720, margin: "28px auto 0" }}>
+        <div className="t-overline text-secondary">Experimente</div>
+        <div className="row wrap gap-1" style={{ marginTop: 10 }}>
+          {EXAMPLE_QUERIES.map((q) => <Chip key={q} label={q} outlined onClick={() => run(q, false)} />)}
+        </div>
+      </div>
+
+      {state.history.length > 0 && (
+        <div style={{ maxWidth: 720, margin: "24px auto 0" }}>
+          <div className="row gap-half text-secondary" style={{ marginBottom: 10 }}><Icon name="history" size={18} /><span className="t-overline">Buscas recentes</span></div>
+          <div className="row wrap gap-1">
+            {state.history.map((q) => <Chip key={q} label={q} outlined onClick={() => run(q, false)} />)}
+          </div>
+        </div>
+      )}
+
+      <div className="divider" style={{ margin: "40px auto", maxWidth: 960 }} />
+
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
+        <div className="row spread" style={{ marginBottom: 4 }}>
+          <div className="row gap-1">
+            <Icon name="auto_awesome" size={22} className="text-secondaryc" />
+            <span className="t-h6">Recomendados para o seu perfil</span>
+          </div>
+          <Button variant="text" endIcon="chevron_right" onClick={() => navigate("profile")}>Ajustar perfil</Button>
+        </div>
+        <p className="t-body2 text-secondary" style={{ marginTop: 0, marginBottom: 18 }}>
+          Com base em <strong>{state.profile.formacao}</strong> e seus interesses em {state.profile.areas.join(", ").toLowerCase()}.
+        </p>
+        <div className="col gap-2">
+          {recs.map((c) => <ResultCard key={cargoKey(c)} cargo={c} onOpen={(x) => navigate("detail", { id: cargoKey(x) })} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- ResultsPage ---------------- */
+function LoadingSkeleton({ count = 4 }) {
+  return (
+    <div className="col gap-2" aria-busy="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <Card key={i} flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+          <div className="card-body row" style={{ gap: 16, alignItems: "flex-start" }}>
+            <Skeleton w={48} h={48} r={8} />
+            <div className="grow">
+              <div className="row spread"><Skeleton w="50%" h={22} /><Skeleton w={150} h={28} r={6} /></div>
+              <Skeleton w="32%" h={14} style={{ marginTop: 10 }} />
+              <div className="row gap-2" style={{ marginTop: 16 }}><Skeleton w={90} h={14} /><Skeleton w={90} h={14} /><Skeleton w={120} h={14} /></div>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ResultsPage() {
+  const { route, navigate, pushHistory, showToast, addAlert } = useApp();
+  const q = route.params.q || "";
+  const ti = !!route.params.ti;
+  const [filters, setFilters] = rS({ uf: "", orgao: "", nivel: [], salarioMin: 0 });
+  const [status, setStatus] = rS("loading");
+  const [results, setResults] = rS([]);
+  const [compare, setCompare] = rS([]);
+  const [forceError, setForceError] = rS(false);
+
+  rE(() => {
+    setStatus("loading");
+    const t = setTimeout(() => {
+      if (forceError) { setStatus("error"); return; }
+      const r = runSemanticSearch(q, { onlyTi: ti, ...filters });
+      setResults(r); setStatus("success"); pushHistory(q);
+    }, 850);
+    return () => clearTimeout(t);
+  }, [q, ti, JSON.stringify(filters), forceError]);
+
+  const toggleCompare = (c) => {
+    const k = cargoKey(c);
+    setCompare((cur) => cur.includes(k) ? cur.filter((x) => x !== k) : cur.length >= 3 ? (showToast("Compare até 3 cargos"), cur) : [...cur, k]);
+  };
+
+  const run = (nq, nti) => navigate("results", { q: nq, ti: nti });
+
+  return (
+    <div className="page">
+      <FilterPanel filters={filters} onChange={setFilters} count={status === "success" ? results.length : null} />
+
+      <div className="row spread wrap" style={{ marginBottom: 18, gap: 12 }}>
+        <div className="row wrap gap-1">
+          <span className="t-body2 text-secondary">{status === "success" ? `${results.length} resultado${results.length !== 1 ? "s" : ""} para` : "Resultados para"}</span>
+          <Chip label={q} size="sm" color="primary" />
+        </div>
+        <Button variant="outlined" size="sm" startIcon="notification_add"
+          onClick={() => { addAlert({ nome: q.slice(0, 32), query: q, onlyTi: ti, uf: filters.uf || "Nacional", freq: "diario" }); showToast("Alerta criado para esta busca", { label: "Ver alertas", onClick: () => navigate("alerts") }); }}>
+          Criar alerta desta busca
+        </Button>
+      </div>
+
+      {status === "loading" && <LoadingSkeleton />}
+      {status === "error" && (
+        <InlineAlert severity="error" title="Não foi possível concluir a busca"
+          action={<Button variant="text" size="sm" startIcon="replay" onClick={() => { setForceError(false); setFilters((f) => ({ ...f })); }}>Tentar novamente</Button>}>
+          Erro inesperado ao consultar o serviço semântico. Tente novamente.
+        </InlineAlert>
+      )}
+      {status === "success" && results.length === 0 && (
+        <div className="empty-wrap">
+          <Icon name="search_off" size={48} />
+          <div className="t-h6" style={{ marginTop: 16 }}>Nenhum cargo correspondeu à sua busca</div>
+          <p className="t-body2 text-secondary" style={{ maxWidth: 460, margin: "8px auto 0" }}>
+            Não encontramos cargos suficientemente relacionados a <strong>“{q}”</strong>. Tente reformular com outros termos, tecnologias ou descrevendo as atividades do cargo.
+          </p>
+          <Button variant="outlined" size="sm" startIcon="tune" style={{ marginTop: 20 }} onClick={() => setFilters({ uf: "", orgao: "", nivel: [], salarioMin: 0 })}>Limpar filtros</Button>
+        </div>
+      )}
+      {status === "success" && results.length > 0 && (
+        <div className="col gap-2">
+          {results.map((c) => (
+            <ResultCard key={cargoKey(c)} cargo={c} onOpen={(x) => navigate("detail", { id: cargoKey(x) })}
+              onCompare={toggleCompare} compareOn={compare.includes(cargoKey(c))} />
+          ))}
+        </div>
+      )}
+
+      {compare.length > 0 && (
+        <div className="snackbar" style={{ background: "var(--paper)", color: "var(--text-primary)", border: "1px solid var(--divider)" }}>
+          <Icon name="library_add_check" className="text-primaryc" />
+          <span className="grow t-body2"><strong>{compare.length}</strong> selecionado{compare.length > 1 ? "s" : ""} para comparar</span>
+          <Button variant="text" size="sm" className="neutral" onClick={() => setCompare([])}>Limpar</Button>
+          <Button variant="contained" size="sm" startIcon="compare_arrows" disabled={compare.length < 2}
+            onClick={() => navigate("compare", { ids: compare })}>Comparar</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, { ResultCard, FilterPanel, HomePage, ResultsPage, LoadingSkeleton, DetailBlock, DetailList });
+
+  </script>
+
+  <!-- screens-detail.jsx -->
+  <script type="text/babel">
+/* global React, Icon, Button, IconButton, Chip, Card, useApp, OrgaoIcon, CardActions,
+   cargoByIds, fmtDate, fmtDateShort, TRACK_LABELS, TRACK_ICONS, TRACK_ORDER, cargoKey, describeRelevance, RelevanceBar */
+const { useState: dS } = React;
+
+function parseId(id) { const i = id.lastIndexOf("-", id.lastIndexOf("-") - 1); /* not robust */ return id; }
+function cargoFromKey(key) {
+  // key = `${edital_id}-${cargo_id}` ; match against catalog
+  return window.CARGOS.find((c) => cargoKey(c) === key) || null;
+}
+
+/* ---------------- Timeline of dates ---------------- */
+function DateTimeline({ datas }) {
+  const steps = [
+    { k: "inscricao_ini", label: "Abertura das inscrições", icon: "event_available" },
+    { k: "inscricao_fim", label: "Encerramento das inscrições", icon: "event_busy" },
+    { k: "prova", label: "Prova objetiva", icon: "edit_note" },
+    { k: "resultado", label: "Resultado final", icon: "emoji_events" },
+  ];
+  const today = new Date("2026-06-09");
+  return (
+    <div className="col" style={{ gap: 0 }}>
+      {steps.map((s, i) => {
+        const d = new Date(datas[s.k]);
+        const past = d < today;
+        return (
+          <div key={s.k} className="row" style={{ gap: 16, alignItems: "flex-start" }}>
+            <div className="col center" style={{ width: 40 }}>
+              <span className="avatar round" style={{ width: 36, height: 36, background: past ? "var(--bg-sunken)" : "var(--primary-050)", color: past ? "var(--text-disabled)" : "var(--primary)" }}>
+                <Icon name={s.icon} size={20} />
+              </span>
+              {i < steps.length - 1 && <div style={{ width: 2, height: 28, background: "var(--divider)" }} />}
+            </div>
+            <div style={{ paddingBottom: 18, paddingTop: 6 }}>
+              <div className="t-sub2">{s.label}</div>
+              <div className="t-body2 text-secondary">{fmtDate(datas[s.k])}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------- DetailPage ---------------- */
+function DetailPage() {
+  const { route, navigate, isFav, toggleFavorite, trackOf, setTracking, inCalendar, toggleCalendar, showToast } = useApp();
+  const cargo = cargoFromKey(route.params.id);
+  const [trackOpen, setTrackOpen] = dS(false);
+  if (!cargo) return <div className="page"><p>Cargo não encontrado.</p></div>;
+  const fav = isFav(cargo);
+  const track = trackOf(cargo);
+  const inCal = inCalendar(cargo);
+  const rel = describeRelevance(cargo.score);
+
+  return (
+    <div className="page page-wide fade-in">
+      <button className="row gap-half" onClick={() => navigate(route.params.from || "results", route.params.fromParams)}
+        style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "0 0 16px", fontFamily: "inherit", fontSize: ".9rem" }}>
+        <Icon name="arrow_back" size={20} /> Voltar
+      </button>
+
+      <div className="row" style={{ gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <OrgaoIcon orgao={cargo.orgao} sigla={cargo.sigla} size={64} />
+        <div className="grow" style={{ minWidth: 280 }}>
+          <div className="row wrap gap-1" style={{ rowGap: 6 }}>
+            <h1 className="t-h4" style={{ margin: 0 }}>{cargo.nome_cargo}</h1>
+          </div>
+          <div className="t-sub1 text-secondary" style={{ marginTop: 4 }}>{cargo.orgao}</div>
+          <div className="row wrap gap-1" style={{ marginTop: 12 }}>
+            <Chip label={cargo.uf} icon="place" size="sm" outlined />
+            <Chip label={`Banca: ${cargo.banca}`} icon="gavel" size="sm" outlined />
+            <Chip label={rel.label} icon="insights" size="sm" color={cargo.score >= 0.75 ? "secondary" : "primary"} />
+          </div>
+        </div>
+      </div>
+
+      {/* action bar */}
+      <Card flat style={{ marginTop: 24, boxShadow: "var(--e1)", borderColor: "transparent" }}>
+        <div className="card-pad-sm row wrap gap-1" style={{ rowGap: 10 }}>
+          <Button variant="contained" startIcon="open_in_new">Acessar edital original</Button>
+          <div style={{ position: "relative" }}>
+            <Button variant={track ? "secondary" : "outlined"} startIcon={track ? TRACK_ICONS[track] : "playlist_add"}
+              endIcon="expand_more" onClick={() => setTrackOpen((v) => !v)}>
+              {track ? TRACK_LABELS[track] : "Acompanhar"}
+            </Button>
+            {trackOpen && (
+              <div className="menu" style={{ position: "absolute", top: 46, left: 0, width: 210 }}>
+                {TRACK_ORDER.map((k) => (
+                  <div key={k} className="menu-item" onClick={() => { setTracking(cargo, k); setTrackOpen(false); showToast(`Movido para "${TRACK_LABELS[k]}"`); }}>
+                    <Icon name={TRACK_ICONS[k]} size={20} />{TRACK_LABELS[k]}
+                  </div>
+                ))}
+                {track && <><div className="divider" /><div className="menu-item danger" onClick={() => { setTracking(cargo, null); setTrackOpen(false); }}><Icon name="remove_circle_outline" size={20} />Remover</div></>}
+              </div>
+            )}
+          </div>
+          <Button variant="outlined" startIcon={fav ? "favorite" : "favorite_border"} className={fav ? "" : ""}
+            onClick={() => { toggleFavorite(cargo); showToast(fav ? "Removido dos salvos" : "Salvo"); }}>
+            {fav ? "Salvo" : "Salvar"}
+          </Button>
+          <Button variant="outlined" startIcon={inCal ? "event_available" : "calendar_add_on"}
+            onClick={() => { toggleCalendar(cargo); showToast(inCal ? "Datas removidas do calendário" : "Datas adicionadas ao calendário", { label: "Ver", onClick: () => navigate("calendar") }); }}>
+            {inCal ? "No calendário" : "Adicionar ao calendário"}
+          </Button>
+          <div className="grow" />
+          <IconButton name="share" aria-label="Compartilhar" onClick={() => showToast("Link copiado")} />
+        </div>
+      </Card>
+
+      {/* body grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, marginTop: 24, alignItems: "start" }}>
+        <div className="col gap-3">
+          <Section icon="assignment_ind" title="Resumo do cargo">
+            <div className="info-grid">
+              <Info icon="payments" label="Remuneração inicial" value={cargo.salario} />
+              <Info icon="schedule" label="Jornada" value={cargo.carga_horaria} />
+              <Info icon="groups" label="Vagas" value={`${cargo.vagas} imediatas · ${cargo.vagas_cr} cadastro reserva`} />
+              <Info icon="school" label="Escolaridade" value={cargo.escolaridade} />
+              <Info icon="receipt_long" label="Taxa de inscrição" value={cargo.taxa} />
+              <Info icon="gavel" label="Banca organizadora" value={cargo.banca} />
+            </div>
+          </Section>
+
+          <Section icon="badge" title="Requisitos">
+            <p className="t-body2 text-secondary" style={{ margin: 0 }}>{cargo.requisitos}</p>
+          </Section>
+
+          <Section icon="menu_book" title="Conteúdo programático">
+            <ul className="detail-ul">{cargo.conteudo_programatico.map((x, i) => <li key={i} className="t-body2">{x}</li>)}</ul>
+          </Section>
+
+          <Section icon="assignment" title="Atribuições do cargo">
+            <ul className="detail-ul">{cargo.atribuicoes.map((x, i) => <li key={i} className="t-body2">{x}</li>)}</ul>
+          </Section>
+
+          <Section icon="event_repeat" title="Histórico e periodicidade">
+            <div className="row wrap gap-1" style={{ marginBottom: 16 }}>
+              <Chip label="Edição atual · 2026" icon="verified" color="secondary" size="sm" />
+              <Chip label={window.periodicidadeLabel(cargo)} icon="event_repeat" size="sm" outlined />
+              <Chip label="Inscrições abertas" icon="how_to_reg" size="sm" color="primary" outlined />
+            </div>
+            <HistoryList cargo={cargo} />
+            <div className="row gap-half text-secondary" style={{ marginTop: 16, alignItems: "flex-start" }}>
+              <Icon name="lightbulb" size={18} style={{ marginTop: 1 }} />
+              <span className="t-cap" style={{ lineHeight: 1.5 }}>
+                Concursos deste órgão costumam se repetir {window.periodicidadeLabel(cargo).replace("~a cada", "a cada")}. Acompanhe a previsão em <strong>Acompanhamento → Aguardando edital</strong>.
+              </span>
+            </div>
+          </Section>
+        </div>
+
+        <div className="col gap-2" style={{ position: "sticky", top: 88 }}>
+          <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+            <div className="card-body">
+              <div className="row gap-half" style={{ marginBottom: 16 }}><Icon name="event" size={20} className="text-primaryc" /><span className="t-sub1">Cronograma</span></div>
+              <DateTimeline datas={cargo.datas} />
+              <Button variant={inCal ? "secondary" : "outlined"} block size="sm" startIcon={inCal ? "check" : "calendar_add_on"} style={{ marginTop: 4 }}
+                onClick={() => { toggleCalendar(cargo); showToast(inCal ? "Removido do calendário" : "Adicionado ao calendário"); }}>
+                {inCal ? "No seu calendário" : "Adicionar datas ao calendário"}
+              </Button>
+            </div>
+          </Card>
+          <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+            <div className="card-body col gap-1">
+              <div className="row gap-half"><Icon name="insights" size={20} className="text-secondaryc" /><span className="t-sub1">Aderência ao seu perfil</span></div>
+              <RelevanceBar score={cargo.score} />
+              <p className="t-cap text-secondary" style={{ margin: "4px 0 0" }}>
+                Calculada por similaridade semântica entre a descrição do cargo e o seu perfil de busca.
+              </p>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Section({ icon, title, children }) {
+  return (
+    <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+      <div className="card-body">
+        <div className="row gap-half" style={{ marginBottom: 14 }}><Icon name={icon} size={20} className="text-secondary" /><span className="t-h6">{title}</span></div>
+        {children}
+      </div>
+    </Card>
+  );
+}
+function Info({ icon, label, value }) {
+  return (
+    <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
+      <Icon name={icon} size={20} className="text-secondary" style={{ marginTop: 2 }} />
+      <div><div className="t-cap text-secondary">{label}</div><div className="t-body2" style={{ fontWeight: 500 }}>{value}</div></div>
+    </div>
+  );
+}
+
+function HistoryList({ cargo }) {
+  const editions = [{ ano: 2026, vagas: cargo.vagas, banca: cargo.banca, current: true }, ...window.historicoOf(cargo)];
+  const maxV = Math.max(...editions.map((e) => e.vagas));
+  return (
+    <div>
+      {editions.map((e) => (
+        <div key={e.ano} className="hist-row">
+          <span className={["hist-year", e.current ? "current" : ""].filter(Boolean).join(" ")}>{e.ano}</span>
+          <div className={["hist-bar", e.current ? "current" : ""].filter(Boolean).join(" ")}>
+            <span style={{ width: `${Math.round((e.vagas / maxV) * 100)}%` }} />
+          </div>
+          <span className="t-body2" style={{ width: 72, flexShrink: 0, fontWeight: 500 }}>{e.vagas} vagas</span>
+          <span className="t-cap text-secondary" style={{ width: 96, flexShrink: 0, textAlign: "right" }}>{e.banca}</span>
+
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------------- ComparePage ---------------- */
+function ComparePage() {
+  const { route, navigate } = useApp();
+  const ids = route.params.ids || [];
+  const cargos = ids.map(cargoFromKey).filter(Boolean);
+  const rows = [
+    { label: "Órgão", get: (c) => c.orgao },
+    { label: "UF", get: (c) => c.uf },
+    { label: "Banca", get: (c) => c.banca },
+    { label: "Escolaridade", get: (c) => c.escolaridade },
+    { label: "Remuneração", get: (c) => c.salario, hi: (c) => c.salarioNum, max: true },
+    { label: "Jornada", get: (c) => c.carga_horaria },
+    { label: "Vagas imediatas", get: (c) => `${c.vagas}`, hi: (c) => c.vagas, max: true },
+    { label: "Cadastro reserva", get: (c) => `${c.vagas_cr}` },
+    { label: "Taxa de inscrição", get: (c) => c.taxa },
+    { label: "Inscrições", get: (c) => `${fmtDateShort(c.datas.inscricao_ini)} – ${fmtDateShort(c.datas.inscricao_fim)}` },
+    { label: "Prova", get: (c) => fmtDateShort(c.datas.prova) },
+    { label: "Aderência", get: (c) => `${Math.round(c.score * 100)}%`, hi: (c) => c.score, max: true },
+  ];
+  const best = (row) => {
+    if (!row.hi) return null;
+    let bi = 0, bv = row.hi(cargos[0]);
+    cargos.forEach((c, i) => { const v = row.hi(c); if (row.max ? v > bv : v < bv) { bv = v; bi = i; } });
+    return bi;
+  };
+
+  return (
+    <div className="page page-wide fade-in">
+      <button className="row gap-half" onClick={() => navigate("results")}
+        style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "0 0 8px", fontFamily: "inherit", fontSize: ".9rem" }}>
+        <Icon name="arrow_back" size={20} /> Voltar aos resultados
+      </button>
+      <h1 className="t-h5" style={{ margin: "0 0 4px" }}>Comparar cargos</h1>
+      <p className="t-body2 text-secondary" style={{ marginTop: 0 }}>O melhor valor de cada linha aparece destacado em verde.</p>
+
+      <div style={{ overflowX: "auto", marginTop: 16 }}>
+        <table className="compare-table">
+          <thead>
+            <tr>
+              <th style={{ width: 180 }}></th>
+              {cargos.map((c) => (
+                <th key={cargoKey(c)}>
+                  <div className="col gap-1" style={{ alignItems: "flex-start" }}>
+                    <OrgaoIcon orgao={c.orgao} sigla={c.sigla} size={40} />
+                    <span className="t-sub2" style={{ cursor: "pointer" }} onClick={() => navigate("detail", { id: cargoKey(c), from: "compare" })}>{c.nome_cargo}</span>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const bi = best(row);
+              return (
+                <tr key={row.label}>
+                  <td className="row-label">{row.label}</td>
+                  {cargos.map((c, i) => (
+                    <td key={cargoKey(c)} className={bi === i ? "cell-best" : ""}>
+                      {row.get(c)}{bi === i && <Icon name="check_circle" size={16} className="text-secondaryc" style={{ marginLeft: 6, verticalAlign: "-3px" }} />}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+            <tr>
+              <td className="row-label"></td>
+              {cargos.map((c) => (
+                <td key={cargoKey(c)}>
+                  <Button variant="outlined" size="sm" startIcon="open_in_full" onClick={() => navigate("detail", { id: cargoKey(c), from: "compare" })}>Ver edital</Button>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { DetailPage, ComparePage, cargoFromKey, DateTimeline });
+
+  </script>
+
+  <!-- screens-app.jsx -->
+  <script type="text/babel">
+/* global React, Icon, Button, IconButton, Chip, Card, TextField, Select, Switch, ToggleGroup, Avatar,
+   Dialog, InlineAlert, useApp, OrgaoIcon, ResultCard, cargoFromKey, cargoKey,
+   TRACK_LABELS, TRACK_ICONS, TRACK_ORDER, fmtDate, fmtDateShort, MESES, UF_LIST, runSemanticSearch */
+const { useState: aS, useRef: aR, useEffect: aE } = React;
+
+/* ============ SAVED ============ */
+function SavedPage() {
+  const { state, navigate, patch } = useApp();
+  const cargos = state.favorites.map(cargoFromKey).filter(Boolean);
+  const [pending, setPending] = aS([]); // chaves marcadas para remoção (confirma ao sair)
+  const [filterQ, setFilterQ] = aS('');
+  const pendingRef = aR(pending); pendingRef.current = pending;
+  const favsRef = aR(state.favorites); favsRef.current = state.favorites;
+
+  // Confirma as remoções somente quando o usuário sai da página "Salvos".
+  React.useEffect(() => () => {
+    const p = pendingRef.current;
+    if (p.length) patch({ favorites: favsRef.current.filter((k) => !p.includes(k)) });
+  }, []);
+
+  const togglePending = (c) => {
+    const k = cargoKey(c);
+    setPending((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+  };
+
+  const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const qTrim = filterQ.trim();
+  const visibleCargos = qTrim
+    ? cargos.filter(c => norm(c.nome_cargo + ' ' + c.orgao + ' ' + c.sigla + ' ' + c.uf).includes(norm(qTrim)))
+    : cargos;
+
+  const remaining = cargos.length - pending.length;
+  const subtitle = pending.length > 0
+    ? `${remaining} ${remaining === 1 ? "edital salvo" : "editais salvos"} · ${pending.length} marcado${pending.length > 1 ? "s" : ""} para remoção`
+    : `${cargos.length} ${cargos.length === 1 ? "edital salvo" : "editais salvos"}`;
+
+  return (
+    <div className="page fade-in">
+      <PageHead icon="bookmark" title="Cargos salvos" subtitle={subtitle} />
+      {cargos.length > 0 && (
+        <div style={{ marginBottom: 16, maxWidth: 560 }}>
+          <TextField value={filterQ} onChange={(e) => setFilterQ(e.target.value)}
+            placeholder="Filtrar por cargo, órgão ou UF…" icon="search"
+            endIcon={filterQ ? <IconButton name="close" size={18} btnSize="sm"
+              onClick={() => setFilterQ('')}
+              type="button" /> : null} />
+        </div>
+      )}
+      {cargos.length === 0 ? (
+        <EmptyState icon="bookmark_border" title="Você ainda não salvou nenhum cargo"
+          text="Toque no coração nos resultados de busca para guardar editais e acompanhá-los aqui."
+          action={<Button variant="contained" startIcon="search" onClick={() => navigate("home")}>Buscar cargos</Button>} />
+      ) : visibleCargos.length === 0 ? (
+        <div className="empty-wrap">
+          <Icon name="search_off" size={44} />
+          <div className="t-h6" style={{ marginTop: 14 }}>Nenhum cargo corresponde ao filtro</div>
+          <Button variant="text" size="sm" startIcon="clear"
+            onClick={() => setFilterQ('')}
+            style={{ marginTop: 10 }}>Limpar filtro</Button>
+        </div>
+      ) : (
+        <div className="col gap-2">
+          {visibleCargos.map((c) => (
+            <ResultCard key={cargoKey(c)} cargo={c}
+              onOpen={(x) => navigate("detail", { id: cargoKey(x), from: "saved" })}
+              savedCtl={{ pending: pending.includes(cargoKey(c)), onToggle: () => togglePending(c) }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ TRACKING (kanban + aguardando edital) ============ */
+function Meta({ icon, label, value }) {
+  return (
+    <div className="row gap-half" style={{ alignItems: "flex-start" }}>
+      <Icon name={icon} size={16} className="text-secondary" style={{ marginTop: 1 }} />
+      <div><div className="t-cap text-secondary" style={{ lineHeight: 1.2 }}>{label}</div><div className="t-body2" style={{ fontWeight: 500 }}>{value}</div></div>
+    </div>
+  );
+}
+
+function ForecastCard({ f, since, studying, onToggle, onAlert }) {
+  const sit = window.FORECAST_SITUACAO[f.situacao];
+  return (
+    <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+      <div className="card-body row" style={{ gap: 16, alignItems: "flex-start" }}>
+        <OrgaoIcon orgao={f.orgao} sigla={f.sigla} size={48} />
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className="row wrap gap-1" style={{ rowGap: 4 }}>
+            <span className="t-h6">{f.cargo}</span>
+            <Chip label={sit.label} icon={sit.icon} color={sit.chip} size="sm" />
+          </div>
+          <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>{f.orgao} · {f.uf}</div>
+
+          <div className="forecast-meta">
+            <Meta icon="event_repeat" label="Periodicidade" value={`~a cada ${f.periodicidade} ${f.periodicidade > 1 ? "anos" : "ano"}`} />
+            <Meta icon="history" label="Último edital" value={`${f.ultimo_ano} · ${f.banca_ant}`} />
+            <Meta icon="upcoming" label="Previsão" value={f.previsao} />
+            <Meta icon="groups" label="Vagas (última edição)" value={f.vagas_ant.toLocaleString("pt-BR")} />
+          </div>
+
+          <div className="row gap-half text-secondary" style={{ marginTop: 12, alignItems: "flex-start" }}>
+            <Icon name="info" size={16} style={{ marginTop: 1 }} /><span className="t-cap" style={{ lineHeight: 1.45 }}>{f.nota}</span>
+          </div>
+
+          {since && (
+            <div className="row gap-half" style={{ marginTop: 10, color: "var(--secondary-dark)" }}>
+              <Icon name="menu_book" size={16} /><span className="t-cap" style={{ fontWeight: 600 }}>Estudando desde {fmtDate(since)}</span>
+            </div>
+          )}
+
+          <div className="row gap-1 wrap" style={{ marginTop: 14 }}>
+            {studying
+              ? <Button variant="outlined" size="sm" startIcon="check_circle" onClick={onToggle}>Estudando para este</Button>
+              : <Button variant="contained" size="sm" startIcon="menu_book" onClick={onToggle}>Estudar para o próximo</Button>}
+            <Button variant="text" size="sm" startIcon="description" endIcon="open_in_new">Ver edital anterior</Button>
+
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ForecastPicker({ open, onClose, available, onAdd }) {
+  const [q, setQ] = aS("");
+  React.useEffect(() => { if (open) setQ(""); }, [open]);
+  if (!open) return null;
+  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const nq = norm(q.trim());
+  const list = available.filter((f) => !nq || norm(`${f.cargo} ${f.orgao} ${f.sigla} ${f.uf} ${f.area}`).includes(nq));
+  return (
+    <Dialog open={open} onClose={onClose} width={640}>
+      <div className="dialog-head row gap-1"><Icon name="add_circle" size={24} className="text-primaryc" /><span className="t-h6">Adicionar concurso previsto</span></div>
+      <div className="dialog-body col gap-2" style={{ paddingTop: 10 }}>
+        <TextField label="Buscar no catálogo de concursos previstos" value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder="Órgão, cargo, sigla ou UF…" icon="search" autoFocus />
+        {available.length === 0 ? (
+          <div className="row gap-half text-secondary" style={{ padding: "8px 2px" }}>
+            <Icon name="task_alt" size={18} /><span className="t-body2">Todos os concursos previstos do catálogo já estão na sua lista.</span>
+          </div>
+        ) : list.length === 0 ? (
+          <div className="row gap-half text-secondary" style={{ padding: "8px 2px" }}>
+            <Icon name="search_off" size={18} /><span className="t-body2">Nenhum concurso encontrado para “{q.trim()}”.</span>
+          </div>
+        ) : (
+          <div className="col gap-1" style={{ maxHeight: 380, overflowY: "auto", margin: "0 -4px", padding: "2px 4px" }}>
+            {list.map((f) => {
+              const sit = window.FORECAST_SITUACAO[f.situacao];
+              return (
+                <div key={f.id} className="picker-row row gap-1" style={{ alignItems: "center" }}>
+                  <OrgaoIcon orgao={f.orgao} sigla={f.sigla} size={40} />
+                  <div className="grow" style={{ minWidth: 0 }}>
+                    <div className="row wrap gap-half" style={{ rowGap: 2, alignItems: "center" }}>
+                      <span className="t-sub2">{f.cargo}</span>
+                      <Chip label={sit.label} icon={sit.icon} color={sit.chip} size="sm" />
+                    </div>
+                    <div className="t-cap text-secondary truncate" style={{ marginTop: 2 }}>{f.sigla} · {f.uf} · {f.previsao}</div>
+                  </div>
+                  <Button variant="contained" size="sm" startIcon="add" onClick={() => onAdd(f)}>Adicionar</Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div className="dialog-actions">
+        <Button variant="text" className="neutral" onClick={onClose}>Concluir</Button>
+      </div>
+    </Dialog>
+  );
+}
+
+function ForecastView() {
+  const { state, toggleStudying, addAlert, showToast, navigate } = useApp();
+  const [pickerOpen, setPickerOpen] = aS(false);
+  const studyingIds = Object.keys(state.studying || {});
+  const studyingList = window.FORECASTS.filter((f) => studyingIds.includes(f.id));
+  const available = window.FORECASTS.filter((f) => !studyingIds.includes(f.id));
+  const makeAlert = (f) => { addAlert({ nome: `${f.sigla} — ${f.cargo.slice(0, 24)}`, query: `${f.cargo} ${f.orgao}`, onlyTi: f.is_ti, uf: f.uf, freq: "instantaneo" }); showToast("Você será avisado quando o edital sair", { label: "Ver alertas", onClick: () => navigate("alerts") }); };
+
+  return (
+    <div className="fade-in">
+      <InlineAlert severity="info" icon="lightbulb">
+        Concursos saem em ciclos. Aqui você acompanha editais que ainda <strong>não foram publicados</strong> e começa a estudar de antemão, usando a última edição como referência.
+      </InlineAlert>
+
+      <div className="row spread" style={{ margin: "24px 0 12px", alignItems: "center", gap: 12 }}>
+        <span className="t-overline text-secondary">Estudando para o próximo ({studyingList.length})</span>
+        <Button variant="contained" size="sm" startIcon="add" onClick={() => setPickerOpen(true)}>Adicionar concurso</Button>
+      </div>
+      {studyingList.length === 0 ? (
+        <EmptyState icon="menu_book" title="Você ainda não está estudando para nenhum concurso futuro"
+          text="Use “Adicionar concurso” para escolher um concurso previsto e começar a se preparar antes mesmo do edital sair."
+          action={<Button variant="contained" startIcon="add" onClick={() => setPickerOpen(true)}>Adicionar concurso</Button>} />
+      ) : (
+        <div className="col gap-2">
+          {studyingList.map((f) => (
+            <ForecastCard key={f.id} f={f} studying since={state.studying[f.id]?.desde}
+              onToggle={() => { toggleStudying(f.id); showToast("Removido de 'estudando para o próximo'"); }} onAlert={() => makeAlert(f)} />
+          ))}
+        </div>
+      )}
+
+      {available.length > 0 && (
+        <>
+          <div className="t-overline text-secondary" style={{ margin: "28px 0 12px" }}>Sugestões para a sua área</div>
+          <div className="col gap-2">
+            {available.map((f) => (
+              <ForecastCard key={f.id} f={f}
+                onToggle={() => { toggleStudying(f.id); makeAlert(f); }} onAlert={() => makeAlert(f)} />
+            ))}
+          </div>
+        </>
+      )}
+
+      <ForecastPicker open={pickerOpen} onClose={() => setPickerOpen(false)} available={available}
+        onAdd={(f) => { toggleStudying(f.id); makeAlert(f); }} />
+    </div>
+  );
+}
+
+/* ============ RESULTADOS (pós-resultado / andamento de convocações) ============ */
+function ResultadoDetail({ r }) {
+  const { isResultNotify, toggleResultNotify, showToast } = useApp();
+  const st = resultStatus(r);
+  const notify = isResultNotify(r.id);
+  const pct = (n) => `${Math.max(0, Math.min(100, (n / st.totalNomeavel) * 100))}%`;
+  const pinColor = st.convocado ? "var(--secondary)" : st.estado === "chegando" ? "var(--warning)" : "var(--primary)";
+  const pill = {
+    convocado: { label: "Convocado", icon: "verified", cls: "st-feito" },
+    chegando: { label: "Convocação chegando", icon: "notifications_active", cls: "st-aguardando" },
+    prazo: { label: "Cadastro de reserva", icon: "schedule", cls: "st-quero" },
+    aguardando: { label: "Cadastro de reserva", icon: "hourglass_top", cls: "st-quero" },
+  }[st.estado];
+
+  return (
+    <>
+      <div className="row" style={{ gap: 16, alignItems: "flex-start" }}>
+        <OrgaoIcon orgao={r.orgao} sigla={r.sigla} size={48} />
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className="row wrap gap-1" style={{ rowGap: 4, alignItems: "center" }}>
+            <span className="t-h6">{r.cargo}</span>
+            <span className={`pill-status ${pill.cls}`}><Icon name={pill.icon} size={16} />{pill.label}</span>
+          </div>
+          <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>{r.orgao} · {r.uf} · Edital {r.ano} · {r.banca}</div>
+          <div className="res-sync"><Icon name="sync" size={15} />Sincronizado automaticamente · há {r.sync_horas}h · {r.fonte}</div>
+        </div>
+      </div>
+
+      <div className="res-hero">
+        <div>
+          <div className="lab">Sua colocação</div>
+          <div className="big" style={{ color: "var(--primary-dark)" }}>{r.colocacao}º</div>
+          <div className="sub">de {r.classificados.toLocaleString("pt-BR")} classificados</div>
+        </div>
+        <div>
+          <div className="lab">Vagas no edital</div>
+          <div className="big">{r.vagas}</div>
+          <div className="sub">imediatas + {r.vagas_cr} cadastro de reserva</div>
+        </div>
+        <div>
+          <div className="lab">Situação</div>
+          <div style={{ marginTop: 8 }}>
+            {st.dentroVagas
+              ? <Chip label="Dentro das vagas" icon="check_circle" color="secondary" />
+              : <Chip label="Cadastro de reserva" icon="event_seat" color="primary" outlined />}
+          </div>
+          <div className="sub">{st.dentroVagas ? "Nomeação prevista" : "Depende do andamento da fila"}</div>
+        </div>
+      </div>
+
+      <div className="res-queue-wrap">
+        <div className="row spread" style={{ marginBottom: 2 }}>
+          <span className="t-sub2">Andamento da convocação</span>
+          <span className="t-cap text-secondary">Convocados até o {st.convocados}º</span>
+        </div>
+        <div className="queue">
+          <div className="fill" style={{ width: pct(st.convocados) }} />
+          <div className="vaga-line" style={{ left: pct(r.vagas) }} data-label={`${r.vagas} vagas`} />
+          <div className="pin" style={{ left: pct(r.colocacao), background: pinColor }} />
+          <div className="pin-label" style={{ left: pct(r.colocacao), color: pinColor }}>Você · {r.colocacao}º</div>
+        </div>
+        <div className="t-cap text-secondary">{st.convocado ? "A convocação já passou pela sua posição." : `Faltam ${st.faltam} ${st.faltam === 1 ? "posição" : "posições"} para a sua vez.`}</div>
+      </div>
+
+      {st.convocado ? (
+        <div className="res-banner success">
+          <Icon name="celebration" size={22} />
+          <span className="grow">Você foi convocado! Nomeação publicada em {fmtDataConv(st.callLot.data)}.</span>
+          <Button variant="text" size="sm" endIcon="open_in_new" className="neutral">Ver no diário</Button>
+        </div>
+      ) : st.estado === "chegando" ? (
+        <div className="res-banner alert">
+          <Icon name="notifications_active" size={22} />
+          <span className="grow">A convocação está a {st.faltam} {st.faltam === 1 ? "posição" : "posições"} de você. Fique atento!</span>
+        </div>
+      ) : null}
+
+      <div className="res-stats">
+        <div className="res-stat"><div className="k">Sua nota</div><div className="v">{r.nota.toLocaleString("pt-BR", { minimumFractionDigits: 1 })}</div></div>
+        <div className="res-stat"><div className="k">Nota de corte</div><div className="v">{r.nota_corte.toLocaleString("pt-BR", { minimumFractionDigits: 1 })}</div></div>
+        <div className="res-stat"><div className="k">Já convocados</div><div className="v">{st.convocados}</div></div>
+        <div className="res-stat"><div className="k">Faltam p/ você</div><div className="v" style={{ color: st.convocado ? "var(--secondary-dark)" : st.estado === "chegando" ? "var(--warning)" : "inherit" }}>{st.convocado ? "—" : st.faltam}</div></div>
+      </div>
+
+      <div className="res-valid">
+        <Icon name="event_available" size={18} />
+        <span>Homologado em {fmtMesAno(r.homologacao)} · válido até <strong>{fmtMesAno(st.validadeFim)}</strong>{r.prorrogado ? " (prorrogado)" : r.prorrogavel ? " (prorrogável)" : ""}</span>
+        <span className={`step-chip ${st.mesesRest <= 10 ? "tone-soon" : "tone-info"}`}><Icon name="hourglass_bottom" size={15} />{st.mesesRest} {st.mesesRest === 1 ? "mês" : "meses"} de validade</span>
+      </div>
+
+      {!st.convocado && (
+        <div className="row gap-half" style={{ marginTop: 14, alignItems: "center" }}>
+          <Switch checked={notify} onChange={() => { toggleResultNotify(r.id); showToast(notify ? "Avisos desativados para este concurso" : "Avisaremos quando a convocação se aproximar de você"); }} />
+          <span className="t-body2">Avisar quando a convocação se aproximar de mim</span>
+        </div>
+      )}
+
+      <div style={{ marginTop: 18 }}>
+        <div className="t-overline text-secondary" style={{ marginBottom: 4 }}>Histórico de convocações</div>
+        <div className="res-tl">
+          {[...r.convocacoes].reverse().map((c, i) => (
+            <div className="res-tl-item" key={i}>
+              <span className="res-tl-dot" />
+              <div className="grow">
+                <div className="row spread wrap" style={{ gap: 8 }}>
+                  <span className="t-sub2">{c.tipo}</span>
+                  <span className="t-cap text-secondary">{fmtDataConv(c.data)}</span>
+                </div>
+                <div className="t-cap text-secondary" style={{ marginTop: 2 }}>{c.qtd} {c.qtd === 1 ? "convocado" : "convocados"} · lista chegou até o {c.ate}º</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ResultadoCard({ r }) {
+  return (
+    <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+      <div className="card-body">
+        <ResultadoDetail r={r} />
+      </div>
+    </Card>
+  );
+}
+
+function CompactResultCard({ r, expanded, onToggle }) {
+  const st = resultStatus(r);
+  const lastCall = r.convocacoes.length > 0 ? r.convocacoes[r.convocacoes.length - 1] : null;
+  const stateInfo = {
+    convocado:  { label: "Convocado",           icon: "verified",             cls: "st-feito",      accent: "var(--secondary)"      },
+    chegando:   { label: "Convocação chegando", icon: "notifications_active", cls: "st-aguardando", accent: "var(--warning)"        },
+    prazo:      { label: "Cadastro de reserva", icon: "schedule",             cls: "st-quero",      accent: "var(--divider-strong)" },
+    aguardando: { label: "Cadastro de reserva", icon: "hourglass_top",        cls: "st-quero",      accent: "var(--divider-strong)" },
+  }[st.estado] || { label: "—", icon: "info", cls: "", accent: "var(--divider-strong)" };
+
+  return (
+    <div style={{
+      background: "var(--paper)",
+      borderRadius: 12,
+      border: "1px solid var(--divider)",
+      borderLeftWidth: 3,
+      borderLeftColor: stateInfo.accent,
+      boxShadow: "var(--e1)",
+      overflow: "hidden",
+    }}>
+      <div className="row" style={{ gap: 14, alignItems: "center", padding: "14px 18px", cursor: "pointer" }} onClick={onToggle}>
+        <OrgaoIcon orgao={r.orgao} sigla={r.sigla} size={40} />
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className="row" style={{ gap: 8, alignItems: "center" }}>
+            <span className="t-sub2 truncate" style={{ flex: 1, minWidth: 0 }}>{r.cargo}</span>
+            <span className={`pill-status ${stateInfo.cls}`} style={{ flexShrink: 0 }}>
+              <Icon name={stateInfo.icon} size={14} />{stateInfo.label}
+            </span>
+          </div>
+          <div className="row" style={{ gap: 16, marginTop: 5, flexWrap: "wrap" }}>
+            <span className="t-cap" style={{ color: "var(--text-secondary)" }}>
+              <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{r.colocacao}ª posição</strong>
+              {!st.convocado && <> · faltam {st.faltam}</>}
+            </span>
+            <span className="t-cap text-secondary">{r.vagas} imediatas · {r.vagas_cr} CR</span>
+            {lastCall && <span className="t-cap text-secondary">Últ. chamada {fmtMesAno(lastCall.data)}</span>}
+          </div>
+        </div>
+        <Icon name={expanded ? "expand_less" : "expand_more"} size={20} className="text-secondary" style={{ flexShrink: 0, marginLeft: 4 }} />
+      </div>
+
+      {expanded && (
+        <div style={{ borderTop: "1px solid var(--divider)" }} onClick={e => e.stopPropagation()}>
+          <div className="card-body">
+            <ResultadoDetail r={r} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResultadosView() {
+  const [sectionCollapsed, setSectionCollapsed] = aS(false);
+  const [expandedId, setExpandedId] = aS(null);
+  const results = window.RESULTADOS;
+
+  const urgencyOrder = { convocado: 0, chegando: 1, prazo: 2, aguardando: 3 };
+  const sorted = [...results].sort((a, b) => {
+    const sa = resultStatus(a), sb = resultStatus(b);
+    const oa = urgencyOrder[sa.estado] != null ? urgencyOrder[sa.estado] : 4;
+    const ob = urgencyOrder[sb.estado] != null ? urgencyOrder[sb.estado] : 4;
+    if (oa !== ob) return oa - ob;
+    return (sa.faltam || 999) - (sb.faltam || 999);
+  });
+
+  const toggle = (id) => setExpandedId(v => v === id ? null : id);
+
+  return (
+    <div className="fade-in">
+      <div className="row spread" style={{ marginBottom: 12, alignItems: "center" }}>
+        <div className="row gap-half" style={{ alignItems: "center" }}>
+          <Icon name="event_seat" size={20} className="text-secondary" />
+          <span className="t-sub1">Resultados acompanhados</span>
+          <span style={{
+            background: "var(--bg-sunken)", borderRadius: 999,
+            padding: "1px 8px", fontSize: ".75rem", color: "var(--text-secondary)", marginLeft: 4,
+          }}>{results.length}</span>
+        </div>
+        <button type="button" className="icon-btn sm" onClick={() => setSectionCollapsed(v => !v)} aria-label={sectionCollapsed ? "Expandir" : "Recolher"}>
+          <Icon name={sectionCollapsed ? "expand_more" : "expand_less"} size={20} />
+        </button>
+      </div>
+
+      {!sectionCollapsed && (
+        <div className="col gap-2">
+          {sorted.map(r => (
+            <CompactResultCard key={r.id} r={r} expanded={expandedId === r.id} onToggle={() => toggle(r.id)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- "Próximo passo": deriva o que importa agora a partir das datas reais do edital ---- */
+const TRACK_TODAY = "2026-06-10";
+function trackDays(aIso, bIso) { return Math.round((new Date(bIso + "T00:00:00") - new Date(aIso + "T00:00:00")) / 86400000); }
+function trackInDays(n) { return n > 45 ? `${Math.round(n / 30)} ${Math.round(n / 30) > 1 ? "meses" : "mês"}` : (n === 1 ? "1 dia" : `${n} dias`); }
+function studyingSince(desde) {
+  const n = trackDays(desde, TRACK_TODAY);
+  if (n <= 1) return "há pouco";
+  if (n < 30) return `há ${n} dias`;
+  const m = Math.round(n / 30);
+  return m <= 1 ? "há 1 mês" : `há ${m} meses`;
+}
+function trackNextStep(c, status) {
+  const d = c.datas;
+  if (status === "feito") return { icon: "verified", tone: "done", label: `Resultado: ${fmtDateShort(d.resultado)}` };
+  if (status === "aguardando") {
+    const r = trackDays(TRACK_TODAY, d.resultado);
+    return r > 0 ? { icon: "hourglass_top", tone: "soon", label: `Resultado em ${trackInDays(r)}` }
+                 : { icon: "verified", tone: "done", label: "Resultado divulgado" };
+  }
+  if (status === "inscrito") {
+    const p = trackDays(TRACK_TODAY, d.prova);
+    return p > 0 ? { icon: "edit_note", tone: p <= 14 ? "urgent" : "soon", label: `Prova em ${trackInDays(p)}` }
+                 : { icon: "how_to_reg", tone: "info", label: "Prova realizada" };
+  }
+  // quero fazer — o que importa é a janela de inscrição
+  const di = trackDays(TRACK_TODAY, d.inscricao_ini);
+  const df = trackDays(TRACK_TODAY, d.inscricao_fim);
+  if (df < 0) return { icon: "event_busy", tone: "muted", label: "Inscrições encerradas" };
+  if (di > 0) return { icon: "upcoming", tone: "info", label: `Inscrições abrem em ${trackInDays(di)}` };
+  return { icon: "how_to_reg", tone: "urgent", label: `Inscreva-se · fecha em ${trackInDays(df)}` };
+}
+
+function KanbanCard({ c, status }) {
+  const { navigate } = useApp();
+  const step = trackNextStep(c, status);
+  return (
+    <div className="kanban-card" draggable
+      onDragStart={(e) => e.currentTarget.dataset.drag = "1"}
+      onClick={() => navigate("detail", { id: cargoKey(c), from: "tracking" })}>
+      <div className="row gap-1" style={{ alignItems: "flex-start" }}>
+        <OrgaoIcon orgao={c.orgao} sigla={c.sigla} size={32} />
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className="t-sub2" style={{ lineHeight: 1.25 }}>{c.nome_cargo}</div>
+          <div className="t-cap text-secondary truncate" style={{ marginTop: 2 }}>{c.sigla} · {c.uf}</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <span className={`step-chip tone-${step.tone}`}><Icon name={step.icon} size={16} />{step.label}</span>
+      </div>
+
+    </div>
+  );
+}
+
+function KanbanBoard() {
+  const { state, navigate, setTracking, showToast } = useApp();
+  const [dragKey, setDragKey] = aS(null);
+  const byStatus = {};
+  TRACK_ORDER.forEach((s) => (byStatus[s] = []));
+  Object.entries(state.tracking).forEach(([k, st]) => { if (byStatus[st]) { const c = cargoFromKey(k); if (c) byStatus[st].push(c); } });
+  const total = Object.keys(state.tracking).length;
+  const onDrop = (status) => { if (dragKey) { const c = cargoFromKey(dragKey); if (c) { setTracking(c, status); showToast(`Movido para "${TRACK_LABELS[status]}"`); } setDragKey(null); } };
+
+  const intro = (
+    <InlineAlert severity="info" icon="checklist">
+      Editais <strong>já publicados</strong>. Mova cada um pela etapa do processo — <strong>quero fazer → inscrito → aguardando resultado → concluído</strong>.
+    </InlineAlert>
+  );
+
+  if (total === 0) {
+    return (
+      <div className="fade-in">
+        {intro}
+        <div style={{ marginTop: 16 }}>
+          <EmptyState icon="checklist" title="Nenhum edital publicado em acompanhamento"
+            text="Use o botão de acompanhar nos resultados para trazer editais abertos para cá e organizá-los pelas etapas da inscrição, da prova e do resultado."
+            action={<Button variant="contained" startIcon="search" onClick={() => navigate("home")}>Buscar cargos</Button>} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="fade-in">
+      {intro}
+      <div className="kanban" style={{ marginTop: 20 }}>
+        {TRACK_ORDER.map((status) => (
+          <div key={status} className="kanban-col" onDragOver={(e) => e.preventDefault()} onDrop={() => onDrop(status)}>
+            <div className="kanban-head">
+              <span className={`pill-status st-${status}`}><Icon name={TRACK_ICONS[status]} size={16} />{TRACK_LABELS[status]}</span>
+              <span className="t-cap text-secondary">{byStatus[status].length}</span>
+            </div>
+            <div className="kanban-body">
+              {byStatus[status].map((c) => (
+                <div key={cargoKey(c)} draggable
+                  onDragStart={() => setDragKey(cargoKey(c))} onDragEnd={() => setDragKey(null)}>
+                  <KanbanCard c={c} status={status} />
+                </div>
+              ))}
+              {byStatus[status].length === 0 && <div className="kanban-empty">Arraste cartões para cá</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TrackingPage() {
+  const { state, route } = useApp();
+  const [tab, setTab] = aS(route.params?.tab || "editais");
+  aE(() => { if (route.params?.tab) setTab(route.params.tab); }, [route.params?.tab]);
+  const liveTotal = Object.keys(state.tracking).length;
+  const studyTotal = Object.keys(state.studying || {}).length;
+  const resultTotal = (window.RESULTADOS || []).length;
+
+  return (
+    <div className="page page-wide fade-in">
+      <PageHead icon="checklist" title="Acompanhamento de concursos"
+        subtitle="Organize editais abertos por etapa, estude para concursos que ainda vão sair e acompanhe os resultados." />
+      <div className="tabs" style={{ marginBottom: 24 }}>
+        <button className={["tab", tab === "editais" ? "active" : ""].filter(Boolean).join(" ")} onClick={() => setTab("editais")}>
+          Inscrições e provas ({liveTotal})
+        </button>
+        <button className={["tab", tab === "previstos" ? "active" : ""].filter(Boolean).join(" ")} onClick={() => setTab("previstos")}>
+          Aguardando edital ({studyTotal})
+        </button>
+        <button className={["tab", tab === "resultados" ? "active" : ""].filter(Boolean).join(" ")} onClick={() => setTab("resultados")}>
+          Resultados ({resultTotal})
+        </button>
+      </div>
+      {tab === "editais" ? <KanbanBoard /> : tab === "previstos" ? <ForecastView /> : <ResultadosView />}
+    </div>
+  );
+}
+
+/* ============ ALERTS ============ */
+function AlertsPage() {
+  const { state, navigate, updateAlert, removeAlert, addAlert, showToast } = useApp();
+  const [editing, setEditing] = aS(null); // alert obj or {new:true}
+  return (
+    <div className="page fade-in">
+      <div className="row spread wrap" style={{ marginBottom: 8, gap: 12 }}>
+        <PageHead icon="notifications" title="Alertas de novos editais"
+          subtitle="Avisamos quando surgir um edital compatível com o perfil que você buscar." inline />
+        <Button variant="contained" startIcon="add" onClick={() => setEditing({ new: true, nome: "", query: "", onlyTi: true, uf: "Nacional", freq: "diario" })}>Novo alerta</Button>
+      </div>
+
+      {state.alerts.length === 0 ? (
+        <EmptyState icon="notifications_off" title="Você não tem alertas"
+          text="Crie um alerta a partir de uma busca para ser avisado assim que um edital compatível for publicado."
+          action={<Button variant="contained" startIcon="add" onClick={() => setEditing({ new: true, nome: "", query: "", onlyTi: true, uf: "Nacional", freq: "diario" })}>Criar alerta</Button>} />
+      ) : (
+        <div className="col gap-2">
+          {state.alerts.map((al) => (
+            <Card key={al.id} flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+              <div className="card-body row" style={{ gap: 16, alignItems: "flex-start" }}>
+                <span className="avatar round" style={{ width: 44, height: 44, background: al.ativo ? "var(--primary-050)" : "var(--bg-sunken)", color: al.ativo ? "var(--primary)" : "var(--text-disabled)" }}>
+                  <Icon name="notifications" size={22} fill={al.novos > 0} />
+                </span>
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <div className="row wrap gap-1" style={{ rowGap: 4 }}>
+                    <span className="t-sub1">{al.nome || al.query}</span>
+                    {al.novos > 0 && al.ativo && <Chip label={`${al.novos} novo${al.novos > 1 ? "s" : ""}`} size="sm" color="secondary" />}
+                    {!al.ativo && <Chip label="Pausado" size="sm" />}
+                  </div>
+                  <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>“{al.query}”</div>
+                  <div className="row wrap gap-1" style={{ marginTop: 10 }}>
+                    <Chip label={al.uf} icon="place" size="sm" outlined />
+                    <Chip label={al.freq === "diario" ? "Diário" : al.freq === "semanal" ? "Semanal" : "Instantâneo"} icon="schedule" size="sm" outlined />
+                  </div>
+                </div>
+                <div className="col" style={{ alignItems: "flex-end", gap: 8 }}>
+                  <Switch checked={al.ativo} onChange={() => { updateAlert(al.id, { ativo: !al.ativo }); }} />
+                  <div className="row gap-half">
+                    {al.novos > 0 && al.ativo && <Button variant="text" size="sm" onClick={() => { navigate("results", { q: al.query, ti: al.onlyTi }); updateAlert(al.id, { novos: 0 }); }}>Ver resultados</Button>}
+                    <IconButton name="edit" size={20} btnSize="sm" aria-label="Editar" onClick={() => setEditing(al)} />
+                    <IconButton name="delete" size={20} btnSize="sm" aria-label="Excluir" onClick={() => { removeAlert(al.id); showToast("Alerta excluído"); }} />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <AlertDialog editing={editing} onClose={() => setEditing(null)}
+        onSave={(data) => {
+          if (editing.new) { addAlert(data); showToast("Alerta criado"); }
+          else { updateAlert(editing.id, data); showToast("Alerta atualizado"); }
+          setEditing(null);
+        }} />
+    </div>
+  );
+}
+
+function AlertDialog({ editing, onClose, onSave }) {
+  const [f, setF] = aS(null);
+  React.useEffect(() => { if (editing) setF({ nome: editing.nome || "", query: editing.query || "", onlyTi: editing.onlyTi ?? true, uf: editing.uf || "Nacional", freq: editing.freq || "diario" }); }, [editing]);
+  if (!editing || !f) return null;
+  const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
+  return (
+    <Dialog open={!!editing} onClose={onClose}>
+      <div className="dialog-head row gap-1"><Icon name={editing.new ? "add_alert" : "edit_notifications"} size={24} className="text-primaryc" /><span className="t-h6">{editing.new ? "Novo alerta" : "Editar alerta"}</span></div>
+      <div className="dialog-body col gap-2" style={{ paddingTop: 12 }}>
+        <TextField label="Nome do alerta" value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ex.: Dev back-end federal" />
+        <TextField label="Consulta (linguagem natural)" value={f.query} onChange={(e) => set("query", e.target.value)} multiline rows={2} placeholder="Descreva o perfil do cargo…" icon="search" />
+        <div className="row gap-2 wrap">
+          <div style={{ flex: "1 1 140px" }}>
+            <Select label="Abrangência (UF)" value={f.uf} onChange={(e) => set("uf", e.target.value)}>
+              {["Nacional", ...UF_LIST.filter((u) => u !== "Nacional")].map((u) => <option key={u} value={u}>{u}</option>)}
+            </Select>
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <Select label="Frequência" value={f.freq} onChange={(e) => set("freq", e.target.value)}>
+              <option value="instantaneo">Instantâneo</option>
+              <option value="diario">Resumo diário</option>
+              <option value="semanal">Resumo semanal</option>
+            </Select>
+          </div>
+        </div>
+      </div>
+      <div className="dialog-actions">
+        <Button variant="text" className="neutral" onClick={onClose}>Cancelar</Button>
+        <Button variant="contained" startIcon="check" disabled={!f.query.trim()} onClick={() => onSave({ ...f, nome: f.nome.trim() || f.query.slice(0, 32) })}>{editing.new ? "Criar alerta" : "Salvar"}</Button>
+      </div>
+    </Dialog>
+  );
+}
+
+/* ============ CALENDAR ============ */
+function CalendarPage() {
+  const { state, navigate } = useApp();
+  const [month, setMonth] = aS(8); // Set 2026 (0-idx) default
+  const year = 2026;
+  const cargos = state.calendar.map(cargoFromKey).filter(Boolean);
+  // gather events
+  const events = [];
+  cargos.forEach((c) => {
+    events.push({ cargo: c, type: "inscricao_fim", label: "Fim das inscrições", icon: "event_busy", color: "var(--warning)", date: c.datas.inscricao_fim });
+    events.push({ cargo: c, type: "prova", label: "Prova", icon: "edit_note", color: "var(--primary)", date: c.datas.prova });
+    events.push({ cargo: c, type: "resultado", label: "Resultado", icon: "emoji_events", color: "var(--secondary)", date: c.datas.resultado });
+  });
+  const inMonth = (iso) => { const [y, m] = iso.split("-").map(Number); return y === year && m - 1 === month; };
+  const monthEvents = events.filter((e) => inMonth(e.date)).sort((a, b) => a.date.localeCompare(b.date));
+
+  const first = new Date(year, month, 1);
+  const startDow = first.getDay();
+  const daysIn = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysIn; d++) cells.push(d);
+  const evForDay = (d) => events.filter((e) => { const [y, m, dd] = e.date.split("-").map(Number); return y === year && m - 1 === month && dd === d; });
+
+  return (
+    <div className="page page-wide fade-in">
+      <PageHead icon="calendar_month" title="Calendário de datas"
+        subtitle="Prazos de inscrição, provas e resultados dos editais que você adicionou." />
+      {cargos.length === 0 ? (
+        <EmptyState icon="event_busy" title="Nenhuma data no seu calendário"
+          text="Abra um edital e use “Adicionar ao calendário” para acompanhar aqui os prazos de inscrição, prova e resultado."
+          action={<Button variant="contained" startIcon="search" onClick={() => navigate("home")}>Buscar cargos</Button>} />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
+          <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+            <div className="card-body">
+              <div className="row spread" style={{ marginBottom: 12 }}>
+                <IconButton name="chevron_left" onClick={() => setMonth((m) => Math.max(5, m - 1))} aria-label="Mês anterior" />
+                <span className="t-h6">{MESES_FULL[month]} de {year}</span>
+                <IconButton name="chevron_right" onClick={() => setMonth((m) => Math.min(11, m + 1))} aria-label="Próximo mês" />
+              </div>
+              <div className="cal-grid cal-dow">{["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => <div key={d} className="t-cap text-secondary" style={{ textAlign: "center", fontWeight: 600 }}>{d}</div>)}</div>
+              <div className="cal-grid">
+                {cells.map((d, i) => (
+                  <div key={i} className={["cal-cell", d ? "" : "empty", d === 9 && month === 5 ? "today" : ""].filter(Boolean).join(" ")}>
+                    {d && <span className="cal-day">{d}</span>}
+                    <div className="cal-dots">
+                      {evForDay(d).slice(0, 3).map((e, j) => <span key={j} className="cal-dot" style={{ background: e.color }} title={`${e.label}: ${e.cargo.sigla}`} />)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="row gap-2 wrap" style={{ marginTop: 14 }}>
+                <Legend color="var(--warning)" label="Inscrições" />
+                <Legend color="var(--primary)" label="Prova" />
+                <Legend color="var(--secondary)" label="Resultado" />
+              </div>
+            </div>
+          </Card>
+
+          <div className="col gap-2">
+            <div className="t-overline text-secondary">Em {MESES_FULL[month]}</div>
+            {monthEvents.length === 0 && <p className="t-body2 text-secondary">Nenhum evento neste mês.</p>}
+            {monthEvents.map((e, i) => (
+              <Card key={i} hoverable flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }} onClick={() => navigate("detail", { id: cargoKey(e.cargo), from: "calendar" })}>
+                <div className="card-pad-sm row gap-1">
+                  <div className="col center" style={{ width: 44, flexShrink: 0 }}>
+                    <span className="t-h6" style={{ color: e.color, lineHeight: 1 }}>{e.date.split("-")[2]}</span>
+                    <span className="t-cap text-secondary">{MESES[+e.date.split("-")[1] - 1]}</span>
+                  </div>
+                  <div className="divider v" />
+                  <div className="grow" style={{ minWidth: 0 }}>
+                    <div className="row gap-half"><Icon name={e.icon} size={16} style={{ color: e.color }} /><span className="t-sub2">{e.label}</span></div>
+                    <div className="t-cap text-secondary truncate" style={{ marginTop: 2 }}>{e.cargo.sigla} — {e.cargo.nome_cargo}</div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+const MESES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+function Legend({ color, label }) { return <span className="row gap-half t-cap text-secondary"><span style={{ width: 10, height: 10, borderRadius: "50%", background: color }} />{label}</span>; }
+
+/* ============ shared bits ============ */
+function PageHead({ icon, title, subtitle, inline }) {
+  return (
+    <div style={{ marginBottom: inline ? 0 : 22 }}>
+      <div className="row gap-1"><Icon name={icon} size={26} className="text-primaryc" /><h1 className="t-h5" style={{ margin: 0 }}>{title}</h1></div>
+      {subtitle && <p className="t-body2 text-secondary" style={{ margin: "6px 0 0 36px" }}>{subtitle}</p>}
+    </div>
+  );
+}
+function EmptyState({ icon, title, text, action }) {
+  return (
+    <div className="empty-wrap">
+      <Icon name={icon} size={48} />
+      <div className="t-h6" style={{ marginTop: 16 }}>{title}</div>
+      <p className="t-body2 text-secondary" style={{ maxWidth: 440, margin: "8px auto 0" }}>{text}</p>
+      {action && <div style={{ marginTop: 22 }}>{action}</div>}
+    </div>
+  );
+}
+
+Object.assign(window, { SavedPage, TrackingPage, AlertsPage, CalendarPage, PageHead, EmptyState, Legend });
+
+  </script>
+
+  <!-- screens-auth.jsx -->
+  <script type="text/babel">
+/* global React, Icon, Button, IconButton, Chip, Card, TextField, Select, SearchableSelect, Switch, ToggleGroup, Avatar,
+   InlineAlert, useApp, Logo, PageHead, UF_LIST */
+const { useState: auS } = React;
+
+const AREAS = [
+  "Desenvolvimento de software", "Análise de dados / BI", "Infraestrutura e redes",
+  "Segurança da informação", "Banco de dados", "Suporte e service desk",
+  "Governança de TI", "Computação forense",
+];
+const FORMACOES = [
+  "Ensino médio completo", "Técnico em Informática",
+  "Superior — Ciência da Computação", "Superior — Sistemas de Informação",
+  "Superior — Engenharia de Software", "Superior — Análise e Desenvolvimento de Sistemas",
+  "Outros...",
+];
+
+/* ============ AUTH (login / signup) ============ */
+function AuthPage() {
+  const { route, navigate, login, patch, state } = useApp();
+  const mode = route.params.mode || "login";
+  const [email, setEmail] = auS(mode === "login" ? "camila.andrade@email.com" : "");
+  const [senha, setSenha] = auS(mode === "login" ? "••••••••" : "");
+  const [nome, setNome] = auS("");
+  const isLogin = mode === "login";
+
+  const submit = () => {
+    if (isLogin) { login(); }
+    else {
+      const ini = (nome.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "EU").toUpperCase();
+      patch({ user: { nome: nome.trim() || "Novo usuário", email, iniciais: ini }, profile: { ...state.profile, onboarded: false } });
+      navigate("onboarding", { step: 0 });
+    }
+  };
+
+  return (
+    <div className="auth-wrap">
+      <div className="auth-side">
+        <div className="auth-side-inner">
+          <Logo size="lg" />
+          <p className="t-h5" style={{ fontWeight: 400, marginTop: 24, maxWidth: 420, lineHeight: 1.4 }}>
+            Busca semântica de cargos em editais de concursos públicos de TI.
+          </p>
+          <div className="col gap-2" style={{ marginTop: 36, maxWidth: 380 }}>
+            <Feat icon="search" title="Busque em linguagem natural" text="Descreva o perfil da vaga; nós encontramos os cargos mais aderentes." />
+            <Feat icon="notifications_active" title="Alertas inteligentes" text="Seja avisado quando surgir um edital com o seu perfil." />
+            <Feat icon="checklist" title="Organize suas candidaturas" text="Acompanhe inscrição, estudos e provas em um só lugar." />
+          </div>
+        </div>
+      </div>
+
+      <div className="auth-main">
+        <Card className="auth-card elevated">
+          <div className="card-body" style={{ padding: 36 }}>
+            <div className="tabs" style={{ marginBottom: 28 }}>
+              <button className={["tab", isLogin ? "active" : ""].filter(Boolean).join(" ")} onClick={() => navigate("auth", { mode: "login" })}>Entrar</button>
+              <button className={["tab", !isLogin ? "active" : ""].filter(Boolean).join(" ")} onClick={() => navigate("auth", { mode: "signup" })}>Criar conta</button>
+            </div>
+
+            <h1 className="t-h5" style={{ margin: "0 0 4px" }}>{isLogin ? "Bem-vindo de volta" : "Crie sua conta gratuita"}</h1>
+            <p className="t-body2 text-secondary" style={{ marginTop: 0, marginBottom: 24 }}>
+              {isLogin ? "Acesse seus salvos, alertas e acompanhamento." : "Comece a encontrar concursos de TI feitos para você."}
+            </p>
+
+            <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="col gap-2">
+              {!isLogin && <TextField label="Nome completo" value={nome} onChange={(e) => setNome(e.target.value)} icon="person" placeholder="Seu nome" autoFocus />}
+              <TextField label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} icon="mail" placeholder="voce@email.com" type="email" />
+              <TextField label="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} icon="lock" placeholder="Sua senha" type="password" />
+              {isLogin && <button type="button" className="btn-text" style={{ alignSelf: "flex-end", padding: "4px 8px", border: "none", background: "none", cursor: "pointer", color: "var(--primary)", fontSize: ".8rem", fontWeight: 600 }}>Esqueci minha senha</button>}
+              <Button variant="contained" size="lg" block type="submit" endIcon="arrow_forward" style={{ marginTop: 4 }}>
+                {isLogin ? "Entrar" : "Criar conta e continuar"}
+              </Button>
+            </form>
+
+            <div className="row center" style={{ gap: 12, margin: "22px 0" }}>
+              <div className="divider grow" /><span className="t-cap text-secondary">ou</span><div className="divider grow" />
+            </div>
+            <Button variant="outlined" size="lg" block notext startIcon="account_circle">Continuar com conta Gov.br</Button>
+            <p className="t-cap text-secondary" style={{ textAlign: "center", marginTop: 20, marginBottom: 0 }}>
+              {isLogin ? "Não tem conta? " : "Já tem conta? "}
+              <a onClick={() => navigate("auth", { mode: isLogin ? "signup" : "login" })} style={{ color: "var(--primary)", fontWeight: 600, cursor: "pointer" }}>{isLogin ? "Criar agora" : "Entrar"}</a>
+            </p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+function Feat({ icon, title, text }) {
+  return (
+    <div className="row gap-2" style={{ alignItems: "flex-start" }}>
+      <span className="avatar round" style={{ width: 44, height: 44, background: "rgba(255,255,255,.16)", color: "#fff", flexShrink: 0 }}><Icon name={icon} size={22} /></span>
+      <div><div className="t-sub1" style={{ color: "#fff" }}>{title}</div><div className="t-body2" style={{ color: "rgba(255,255,255,.78)" }}>{text}</div></div>
+    </div>
+  );
+}
+
+/* ============ ONBOARDING ============ */
+function OnboardingPage() {
+  const { route, navigate, patch, state, login } = useApp();
+  const step = route.params.step ?? 0;
+  const CONCLUSION = 3;
+  const firstName = state.user.nome.split(" ")[0];
+
+  const [draft, setDraft] = auS({
+    formacao: state.profile.formacao, nivel: state.profile.nivel,
+    areas: [...state.profile.areas], ufs: [...state.profile.ufs], salarioMin: state.profile.salarioMin,
+  });
+  const set = (k, v) => setDraft((s) => ({ ...s, [k]: v }));
+  const toggleArr = (k, v) => setDraft((s) => ({ ...s, [k]: s[k].includes(v) ? s[k].filter((x) => x !== v) : [...s[k], v] }));
+
+  const skipOnboarding = () => {
+    const nivel = draft.formacao.startsWith("Superior") ? "superior" : draft.formacao.startsWith("Técnico") ? "tecnico" : "medio";
+    patch({ profile: { ...state.profile, ...draft, nivel, onboarded: false } });
+    login();
+  };
+
+  const isCustomFormacao = !!draft.formacao && !FORMACOES.includes(draft.formacao);
+  const [customFormacaoText, setCustomFormacaoText] = auS(isCustomFormacao ? draft.formacao : "");
+  const [addAreaOpen, setAddAreaOpen] = auS(false);
+  const [newArea, setNewArea] = auS("");
+  const customAreas = draft.areas.filter((a) => !AREAS.includes(a));
+
+  const completeWizard = () => {
+    const nivel = draft.formacao.startsWith("Superior") ? "superior" : draft.formacao.startsWith("Técnico") ? "tecnico" : "medio";
+    patch({ profile: { ...draft, nivel, onboarded: true } });
+    navigate("onboarding", { step: CONCLUSION });
+  };
+
+  const steps = [
+    {
+      icon: "school", title: "Qual a sua formação?", sub: "Usamos isso para recomendar cargos compatíveis com a escolaridade exigida.",
+      body: (
+        <div className="col gap-2">
+          <div className="onb-options">
+            {FORMACOES.map((f) => {
+              const isOthers = f === "Outros...";
+              const sel = isOthers ? (isCustomFormacao || draft.formacao === "Outros...") : draft.formacao === f;
+              return (
+                <button key={f} className={["onb-opt", sel ? "sel" : ""].filter(Boolean).join(" ")}
+                  onClick={() => { if (isOthers) { set("formacao", customFormacaoText || "Outros..."); } else { set("formacao", f); } }}>
+                  <Icon name={sel ? "radio_button_checked" : "radio_button_unchecked"} size={22} className={sel ? "text-primaryc" : "text-secondary"} />
+                  <span className="t-body1">{f}</span>
+                </button>
+              );
+            })}
+          </div>
+          {(draft.formacao === "Outros..." || isCustomFormacao) && (
+            <TextField label="Descreva sua formação" value={customFormacaoText} autoFocus
+              onChange={(e) => { setCustomFormacaoText(e.target.value); set("formacao", e.target.value || "Outros..."); }}
+              placeholder="Ex.: Engenharia Elétrica, Direito, Administração…" />
+          )}
+        </div>
+      ),
+      valid: !!draft.formacao && draft.formacao !== "Outros...",
+    },
+    {
+      icon: "interests", title: "Quais áreas te interessam?", sub: "Selecione uma ou mais. Isso ajusta a relevância dos resultados.",
+      body: (
+        <>
+          <div className="row wrap gap-1">
+            {AREAS.map((a) => <Chip key={a} label={a} outlined={!draft.areas.includes(a)} selected={draft.areas.includes(a)} color="primary" onClick={() => toggleArr("areas", a)} icon={draft.areas.includes(a) ? "check" : undefined} />)}
+            {customAreas.map((a) => <Chip key={a} label={a} selected color="primary" onDelete={() => toggleArr("areas", a)} />)}
+            <Chip label="+" icon="add" outlined onClick={() => { setNewArea(""); setAddAreaOpen(true); }} />
+          </div>
+          <Dialog open={addAreaOpen} onClose={() => setAddAreaOpen(false)} title="Adicionar área">
+            <div className="dialog-body" style={{ paddingTop: 12 }}>
+              <TextField label="Nome da área" value={newArea} onChange={(e) => setNewArea(e.target.value)} autoFocus placeholder="Ex.: Machine Learning, IoT, Robótica…" />
+            </div>
+            <div className="dialog-actions">
+              <Button variant="text" className="neutral" onClick={() => setAddAreaOpen(false)}>Cancelar</Button>
+              <Button variant="contained" startIcon="add" disabled={!newArea.trim() || draft.areas.includes(newArea.trim())} onClick={() => { toggleArr("areas", newArea.trim()); setAddAreaOpen(false); }}>Adicionar</Button>
+            </div>
+          </Dialog>
+        </>
+      ),
+      valid: draft.areas.length > 0,
+    },
+    {
+      icon: "tune", title: "Salário e localização", sub: "Defina suas preferências de localização e remuneração mínima.",
+      body: (
+        <div className="col gap-3" style={{ maxWidth: 460 }}>
+          <div>
+            <div className="t-sub2" style={{ marginBottom: 10 }}>Estados de interesse</div>
+            <div className="row wrap gap-1">{["Nacional", ...UF_LIST.filter((u) => u !== "Nacional")].map((u) => <Chip key={u} label={u} outlined={!draft.ufs.includes(u)} selected={draft.ufs.includes(u)} color="primary" onClick={() => toggleArr("ufs", u)} />)}</div>
+          </div>
+          <div>
+            <div className="t-sub2" style={{ marginBottom: 4 }}>Remuneração mínima desejada</div>
+            <div className="t-h5 text-primaryc" style={{ marginBottom: 8 }}>R$ {draft.salarioMin.toLocaleString("pt-BR")}</div>
+            <input type="range" min="0" max="22000" step="500" value={draft.salarioMin} onChange={(e) => set("salarioMin", Number(e.target.value))} style={{ width: "100%", accentColor: "var(--primary)" }} />
+            <div className="row spread t-cap text-secondary"><span>R$ 0</span><span>R$ 22.000</span></div>
+          </div>
+        </div>
+      ),
+      valid: true,
+    },
+  ];
+
+  /* ── Tela de conclusão ── */
+  if (step === CONCLUSION) {
+    const p = state.profile;
+    return (
+      <div className="onb-wrap">
+        <div className="onb-top"><Logo size="sm" /></div>
+        <div className="onb-card-wrap">
+          <Card className="elevated" style={{ maxWidth: 560, width: "100%" }}>
+            <div className="onb-conclusion">
+              <Icon name="check_circle" size={48} fill className="text-secondaryc" style={{ fontSize: 72 }} />
+              <h1 className="t-h4" style={{ margin: "20px 0 8px" }}>Tudo pronto, {firstName}!</h1>
+              <p className="t-body1 text-secondary" style={{ margin: "0 0 28px", maxWidth: 380 }}>Seu perfil está configurado. Veja um resumo do que selecionou:</p>
+              <div className="onb-summary">
+                <div className="onb-summary-row">
+                  <span className="onb-summary-label">Formação</span>
+                  <span className="t-body2">{p.formacao}</span>
+                </div>
+                {p.areas.length > 0 && (
+                  <div className="onb-summary-row">
+                    <span className="onb-summary-label">Áreas de interesse</span>
+                    <div className="row wrap gap-1">{p.areas.map((a) => <Chip key={a} label={a} color="primary" size="sm" />)}</div>
+                  </div>
+                )}
+                {p.ufs.length > 0 && (
+                  <div className="onb-summary-row">
+                    <span className="onb-summary-label">Localização</span>
+                    <div className="row wrap gap-1">{p.ufs.map((u) => <Chip key={u} label={u} size="sm" outlined />)}</div>
+                  </div>
+                )}
+                {p.salarioMin > 0 && (
+                  <div className="onb-summary-row">
+                    <span className="onb-summary-label">Remuneração mínima</span>
+                    <span className="t-body2 text-primaryc" style={{ fontWeight: 600 }}>R$ {p.salarioMin.toLocaleString("pt-BR")}</span>
+                  </div>
+                )}
+              </div>
+              <Button variant="contained" size="lg" endIcon="arrow_forward" onClick={login} style={{ marginTop: 36 }}>Começar a explorar</Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Wizard steps 0–2 ── */
+  const cur = steps[step];
+  return (
+    <div className="onb-wrap">
+      <div className="onb-top">
+        <Logo size="sm" />
+        <button className="btn-text neutral" style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)", fontWeight: 600, fontSize: ".85rem" }} onClick={skipOnboarding}>Pular configuração</button>
+      </div>
+      <div className="onb-card-wrap">
+        <Card className="elevated" style={{ maxWidth: 640, width: "100%" }}>
+          <div className="card-body" style={{ padding: 40 }}>
+            <div className="row gap-1" style={{ marginBottom: 6 }}>
+              {steps.map((_, i) => <div key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: i <= step ? "var(--primary)" : "var(--bg-sunken)", transition: "background .3s" }} />)}
+            </div>
+            <div className="t-cap text-secondary" style={{ marginBottom: 20 }}>Passo {step + 1} de {steps.length}</div>
+            <div className="row gap-1" style={{ marginBottom: 6 }}><Icon name={cur.icon} size={28} className="text-primaryc" /><h1 className="t-h5" style={{ margin: 0 }}>{cur.title}</h1></div>
+            <p className="t-body2 text-secondary" style={{ marginTop: 0, marginBottom: 28 }}>{cur.sub}</p>
+            <div style={{ minHeight: 200 }}>{cur.body}</div>
+            <div className="row spread" style={{ marginTop: 32 }}>
+              <Button variant="text" className="neutral" startIcon="arrow_back" disabled={step === 0} onClick={() => navigate("onboarding", { step: step - 1 })}>Voltar</Button>
+              {step < steps.length - 1
+                ? <Button variant="contained" endIcon="arrow_forward" disabled={!cur.valid} onClick={() => navigate("onboarding", { step: step + 1 })}>Continuar</Button>
+                : <Button variant="secondary" endIcon="check" disabled={!cur.valid} onClick={completeWizard}>Concluir e começar</Button>}
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+/* ============ PROFILE ============ */
+function ProfilePage() {
+  const { state, patch, showToast, navigate } = useApp();
+  const p = state.profile;
+  const [draft, setDraft] = auS({ ...p, nome: state.user.nome, email: state.user.email });
+  const [editingPersonal, setEditingPersonal] = auS(false);
+  const [personalDraft, setPersonalDraft] = auS({ nome: state.user.nome, email: state.user.email });
+  const [profileAddOpen, setProfileAddOpen] = auS(false);
+  const [profileNewArea, setProfileNewArea] = auS("");
+  const set = (k, v) => setDraft((s) => ({ ...s, [k]: v }));
+  const toggleArr = (k, v) => setDraft((s) => ({ ...s, [k]: s[k].includes(v) ? s[k].filter((x) => x !== v) : [...s[k], v] }));
+  const isCustomFormacaoP = !!draft.formacao && !FORMACOES.includes(draft.formacao);
+  const profileCustomAreas = draft.areas.filter((a) => !AREAS.includes(a));
+
+  const startEditPersonal = () => {
+    setPersonalDraft({ nome: state.user.nome, email: state.user.email });
+    setEditingPersonal(true);
+  };
+  const cancelEditPersonal = () => setEditingPersonal(false);
+  const savePersonal = () => {
+    const ini = (personalDraft.nome.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "EU").toUpperCase();
+    patch({ user: { ...state.user, nome: personalDraft.nome.trim(), email: personalDraft.email.trim(), iniciais: ini } });
+    setDraft((s) => ({ ...s, nome: personalDraft.nome.trim(), email: personalDraft.email.trim() }));
+    setEditingPersonal(false);
+    showToast("Dados pessoais atualizados");
+  };
+
+  const savePrefs = () => {
+    const nivel = draft.formacao.startsWith("Superior") ? "superior" : draft.formacao.startsWith("Técnico") ? "tecnico" : "medio";
+    patch({ profile: { formacao: draft.formacao, nivel, areas: draft.areas, ufs: draft.ufs, salarioMin: draft.salarioMin, onboarded: true } });
+    showToast("Preferências atualizadas");
+  };
+
+  return (
+    <div className="page fade-in">
+      <PageHead icon="account_circle" title="Meu perfil" subtitle="Mantenha seus dados atualizados para recomendações mais precisas." />
+      <div className="col gap-3" style={{ maxWidth: 680, margin: "0 auto" }}>
+        <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+          <div className="card-body">
+            {!editingPersonal ? (
+              <>
+                <div className="row gap-2" style={{ marginBottom: 16 }}>
+                  <Avatar size={64} round color="var(--secondary)" style={{ fontSize: 26 }}>{state.user.iniciais}</Avatar>
+                  <div className="grow">
+                    <div className="t-h6">{state.user.nome}</div>
+                    <div className="t-body2 text-secondary">{state.user.email}</div>
+                  </div>
+                  <Button variant="outlined" size="sm" startIcon="edit" onClick={startEditPersonal}>Editar</Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="row gap-half" style={{ marginBottom: 16 }}>
+                  <Icon name="edit" size={18} className="text-primaryc" />
+                  <span className="t-sub2">Editar dados pessoais</span>
+                </div>
+                <div className="row gap-2 wrap" style={{ marginBottom: 16 }}>
+                  <div style={{ flex: "1 1 240px" }}><TextField label="Nome completo" value={personalDraft.nome} onChange={(e) => setPersonalDraft((s) => ({ ...s, nome: e.target.value }))} icon="person" autoFocus /></div>
+                  <div style={{ flex: "1 1 240px" }}><TextField label="E-mail" value={personalDraft.email} onChange={(e) => setPersonalDraft((s) => ({ ...s, email: e.target.value }))} icon="mail" /></div>
+                </div>
+                <div className="row gap-1" style={{ justifyContent: "flex-end" }}>
+                  <Button variant="text" className="neutral" onClick={cancelEditPersonal}>Cancelar</Button>
+                  <Button variant="contained" size="sm" startIcon="check" onClick={savePersonal} disabled={!personalDraft.nome.trim() || !personalDraft.email.trim()}>Confirmar</Button>
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
+
+        <Card flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+          <div className="card-body col gap-3">
+            <div className="row gap-half"><Icon name="auto_awesome" size={20} className="text-secondaryc" /><span className="t-h6">Preferências de recomendação</span></div>
+            <div className="col gap-2">
+              <SearchableSelect label="Formação" value={isCustomFormacaoP ? "Outros..." : draft.formacao}
+                onChange={(e) => { if (e.target.value === "Outros...") { set("formacao", "Outros..."); } else { set("formacao", e.target.value); } }}
+                options={FORMACOES} />
+              {(draft.formacao === "Outros..." || isCustomFormacaoP) && (
+                <TextField label="Descreva sua formação" value={isCustomFormacaoP ? draft.formacao : ""}
+                  onChange={(e) => set("formacao", e.target.value || "Outros...")}
+                  placeholder="Ex.: Engenharia Elétrica, Direito, Administração…" />
+              )}
+            </div>
+            <div>
+              <div className="t-sub2" style={{ marginBottom: 10 }}>Áreas de interesse</div>
+              <div className="row wrap gap-1">
+                {AREAS.map((a) => <Chip key={a} label={a} outlined={!draft.areas.includes(a)} selected={draft.areas.includes(a)} color="primary" onClick={() => toggleArr("areas", a)} icon={draft.areas.includes(a) ? "check" : undefined} />)}
+                {profileCustomAreas.map((a) => <Chip key={a} label={a} selected color="primary" onDelete={() => toggleArr("areas", a)} />)}
+                <Chip label="+" icon="add" outlined onClick={() => { setProfileNewArea(""); setProfileAddOpen(true); }} />
+              </div>
+              <Dialog open={profileAddOpen} onClose={() => setProfileAddOpen(false)} title="Adicionar área">
+                <div className="dialog-body" style={{ paddingTop: 12 }}>
+                  <TextField label="Nome da área" value={profileNewArea} onChange={(e) => setProfileNewArea(e.target.value)} autoFocus placeholder="Ex.: Machine Learning, IoT, Robótica…" />
+                </div>
+                <div className="dialog-actions">
+                  <Button variant="text" className="neutral" onClick={() => setProfileAddOpen(false)}>Cancelar</Button>
+                  <Button variant="contained" startIcon="add" disabled={!profileNewArea.trim() || draft.areas.includes(profileNewArea.trim())} onClick={() => { toggleArr("areas", profileNewArea.trim()); setProfileAddOpen(false); }}>Adicionar</Button>
+                </div>
+              </Dialog>
+            </div>
+            <div>
+              <div className="t-sub2" style={{ marginBottom: 10 }}>Estados de interesse</div>
+              <div className="row wrap gap-1">{["Nacional", ...UF_LIST.filter((u) => u !== "Nacional")].map((u) => <Chip key={u} label={u} outlined={!draft.ufs.includes(u)} selected={draft.ufs.includes(u)} color="primary" onClick={() => toggleArr("ufs", u)} />)}</div>
+            </div>
+            <div>
+              <div className="t-sub2" style={{ marginBottom: 4 }}>Remuneração mínima desejada — <span className="text-primaryc">R$ {draft.salarioMin.toLocaleString("pt-BR")}</span></div>
+              <input type="range" min="0" max="22000" step="500" value={draft.salarioMin} onChange={(e) => set("salarioMin", Number(e.target.value))} style={{ width: "100%", accentColor: "var(--primary)" }} />
+            </div>
+          </div>
+        </Card>
+
+        <div className="row gap-1" style={{ justifyContent: "flex-end" }}>
+          <Button variant="text" className="neutral" onClick={() => navigate("home")}>Cancelar</Button>
+          <Button variant="contained" startIcon="save" onClick={savePrefs}>Salvar preferências</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============ HELP / CENTRAL DE AJUDA ============ */
+const HELP_CATS = [
+  { id: "primeiros-passos", icon: "flag", title: "Primeiros passos", desc: "Crie sua conta, monte seu perfil e faça a primeira busca.",
+    articles: ["criar-conta", "primeira-busca"] },
+  { id: "busca", icon: "search", title: "Busca inteligente", desc: "Descreva cargos em linguagem natural e entenda a aderência.",
+    articles: ["como-busca-funciona", "aderencia", "refinar-filtros"] },
+  { id: "alertas", icon: "notifications", title: "Alertas", desc: "Seja avisado assim que surgir um edital com o seu perfil.",
+    articles: ["criar-alertas", "gerenciar-alertas"] },
+  { id: "acompanhamento", icon: "checklist", title: "Acompanhamento", desc: "Organize inscrições, estudos e acompanhe sua colocação.",
+    articles: ["acompanhar-candidaturas", "colocacao-convocacao"] },
+  { id: "calendario", icon: "calendar_month", title: "Calendário e prazos", desc: "Veja inscrições, provas e resultados em um só lugar.",
+    articles: ["calendario-prazos"] },
+  { id: "conta", icon: "shield", title: "Conta e privacidade", desc: "Edite seus dados, preferências e entenda o uso deles.",
+    articles: ["editar-perfil", "privacidade"] },
+];
+
+const HELP_ARTICLES = {
+  "criar-conta": { cat: "primeiros-passos", title: "Criar conta e montar seu perfil", read: 3, lead: "Seu perfil é o que torna as recomendações e os alertas precisos. Leva menos de dois minutos.",
+    blocks: [
+      { k: "p", t: "Ao criar a conta, o gFind conduz um breve **onboarding** com algumas perguntas sobre o seu objetivo profissional. As respostas alimentam o motor de recomendação." },
+      { k: "h", id: "passos", t: "Como montar o perfil" },
+      { k: "steps", items: [
+        "Informe sua **formação** — é ela que define seu nível (médio, técnico ou superior) e filtra cargos compatíveis.",
+        "Selecione suas **áreas de interesse** (ex.: desenvolvimento, dados, infraestrutura).",
+        "Escolha os **estados** onde aceitaria trabalhar — use \"Nacional\" para concursos sem lotação fixa.",
+        "Defina a **remuneração mínima** desejada para priorizar as vagas certas.",
+      ]},
+      { k: "note", t: "Você pode ajustar tudo isso depois em **Meu perfil**. Quanto mais completo, melhores as recomendações da tela inicial." },
+    ]},
+  "primeira-busca": { cat: "primeiros-passos", title: "Fazendo sua primeira busca", read: 2, lead: "Diferente de filtros tradicionais, no gFind você descreve o que procura com suas próprias palavras.",
+    blocks: [
+      { k: "p", t: "Na tela **Buscar Editais**, escreva o cargo como você o descreveria a um colega — pode citar tecnologias, atividades ou o título da vaga." },
+      { k: "ul", items: [
+        "\"desenvolvedor back-end com foco em segurança\"",
+        "\"analista de infraestrutura, nuvem e kubernetes\"",
+        "\"suporte e administração de banco de dados\"",
+      ]},
+      { k: "p", t: "O gFind interpreta o sentido da frase e retorna os cargos mais **aderentes** nos editais abertos, ordenados por relevância." },
+      { k: "note", t: "Não encontrou o suficiente? Reformule com outros termos ou descreva as atividades em vez do título." },
+    ]},
+  "como-busca-funciona": { cat: "busca", title: "Como funciona a busca em linguagem natural", read: 4, lead: "A busca do gFind é semântica: ela compara o significado da sua descrição com o conteúdo dos editais — não apenas palavras-chave.",
+    blocks: [
+      { k: "h", id: "semantica", t: "O que é busca semântica" },
+      { k: "p", t: "Buscas tradicionais exigem que você acerte exatamente as palavras do edital. A busca **semântica** entende sinônimos e contexto: \"programador Java\" e \"desenvolvedor back-end\" são reconhecidos como próximos, mesmo sem repetir os termos." },
+      { k: "h", id: "boa-busca", t: "Como escrever uma boa busca" },
+      { k: "steps", items: [
+        "Descreva **atividades e tecnologias**, não só o título do cargo.",
+        "Seja específico no que importa para você (ex.: \"segurança da informação\", \"dados\").",
+        "Evite siglas isoladas — prefira escrevê-las por extenso na primeira vez.",
+        "Use os **filtros** para restringir por estado, órgão, nível ou salário depois de buscar.",
+      ]},
+      { k: "h", id: "limite", t: "Limite de caracteres" },
+      { k: "p", t: "A descrição aceita até 280 caracteres — espaço suficiente para um parágrafo curto e objetivo. Frases muito longas tendem a diluir o foco da busca." },
+      { k: "tip", t: "Quanto mais a sua descrição se parece com a **rotina real** do cargo, melhor a aderência dos resultados." },
+    ]},
+  "aderencia": { cat: "busca", title: "Entendendo a aderência ao perfil", read: 3, lead: "Cada resultado mostra um percentual de aderência. Ele indica o quão próximo o cargo está da sua descrição.",
+    blocks: [
+      { k: "p", t: "A **aderência** é calculada por similaridade semântica entre a descrição do cargo no edital e a sua busca (combinada ao seu perfil). Quanto maior, mais relacionado o cargo está ao que você procura." },
+      { k: "h", id: "faixas", t: "Faixas de aderência" },
+      { k: "ul", items: [
+        "**Alta aderência** — o cargo bate fortemente com a sua busca; priorize.",
+        "**Média aderência** — relacionado, mas com diferenças; vale conferir os requisitos.",
+        "**Baixa aderência** — tangencial; aparece para você não perder nada relevante.",
+      ]},
+      { k: "note", t: "A aderência é um guia de **priorização**, não uma regra de elegibilidade. Sempre confirme os requisitos oficiais no edital antes de se inscrever." },
+    ]},
+  "refinar-filtros": { cat: "busca", title: "Refinando resultados com filtros", read: 2, lead: "Depois de buscar, use os filtros para chegar exatamente onde quer.",
+    blocks: [
+      { k: "p", t: "Os filtros agem **sobre** os resultados da busca — eles não substituem a descrição, refinam o que ela trouxe." },
+      { k: "ul", items: [
+        "**Estado (UF)** — restringe a vagas de uma localidade.",
+        "**Órgão** — limita a um órgão específico.",
+        "**Nível** — médio, técnico ou superior.",
+        "**Salário mínimo** — esconde vagas abaixo do valor desejado.",
+      ]},
+      { k: "tip", t: "Não achou nada? Comece sem filtros e adicione um de cada vez para enxergar o impacto de cada um." },
+    ]},
+  "criar-alertas": { cat: "alertas", title: "Criando alertas de novos editais", read: 3, lead: "Alertas avisam você quando um edital compatível com uma busca é publicado — sem precisar checar manualmente.",
+    blocks: [
+      { k: "h", id: "criar", t: "Duas formas de criar" },
+      { k: "steps", items: [
+        "**A partir de uma busca:** após buscar, toque em \"Criar alerta desta busca\" para monitorar exatamente aqueles critérios.",
+        "**Do zero:** em **Alertas**, toque em \"Novo alerta\" e descreva o perfil que quer monitorar.",
+      ]},
+      { k: "h", id: "frequencia", t: "Frequência de aviso" },
+      { k: "ul", items: [
+        "**Instantâneo** — assim que um edital compatível é detectado.",
+        "**Diário** — um resumo por dia.",
+        "**Semanal** — um resumo por semana.",
+      ]},
+      { k: "note", t: "Os avisos aparecem no sino de notificações e levam direto aos resultados do alerta." },
+    ]},
+  "gerenciar-alertas": { cat: "alertas", title: "Gerenciando e pausando alertas", read: 2, lead: "Tudo o que você criou fica reunido na tela de Alertas.",
+    blocks: [
+      { k: "ul", items: [
+        "**Pausar** — desative o interruptor para parar de receber avisos sem excluir o alerta.",
+        "**Editar** — ajuste a consulta, o estado ou a frequência a qualquer momento.",
+        "**Excluir** — remova alertas que não interessam mais.",
+        "**Ver resultados** — quando há novidades, abra os editais encontrados em um toque.",
+      ]},
+      { k: "tip", t: "Mantenha de 2 a 4 alertas bem descritos em vez de muitos genéricos — você recebe avisos mais relevantes." },
+    ]},
+  "acompanhar-candidaturas": { cat: "acompanhamento", title: "Acompanhando inscrições e estudos", read: 3, lead: "O Acompanhamento reúne, em abas, todo o ciclo de uma candidatura.",
+    blocks: [
+      { k: "h", id: "abas", t: "As abas do acompanhamento" },
+      { k: "ul", items: [
+        "**Aguardando edital** — cargos previstos que você marcou para ser avisado quando o edital sair.",
+        "**Em estudo** — concursos abertos que você está se preparando para prestar.",
+        "**Resultados** — concursos já realizados, onde você acompanha sua colocação.",
+      ]},
+      { k: "p", t: "Mova um cargo entre as etapas conforme sua candidatura avança, mantendo tudo organizado em um só lugar." },
+      { k: "note", t: "As datas de inscrição, prova e resultado de cada cargo acompanhado aparecem automaticamente no **Calendário**." },
+    ]},
+  "colocacao-convocacao": { cat: "acompanhamento", title: "Colocação, nota de corte e convocação", read: 4, lead: "Depois do resultado, o gFind sincroniza sua situação no concurso e estima quando sua vez chega.",
+    blocks: [
+      { k: "h", id: "colocacao", t: "Sua colocação" },
+      { k: "p", t: "Mostramos sua **colocação** entre os classificados e a comparamos com o total de vagas e com o número de candidatos já convocados." },
+      { k: "h", id: "corte", t: "Nota de corte" },
+      { k: "p", t: "A **nota de corte** é a menor pontuação que garantiu classificação dentro do número de vagas. Serve de referência para entender quão perto você ficou." },
+      { k: "h", id: "convocacao", t: "Convocação e cadastro de reserva" },
+      { k: "p", t: "Conforme os primeiros colocados são chamados (**convocados**) e eventualmente desistem ou não assumem, a fila anda. Quem ficou além das vagas fica em **cadastro de reserva** e pode ser chamado durante a validade do concurso." },
+      { k: "tip", t: "Ative o aviso de um resultado para ser notificado quando faltarem poucas posições para a sua convocação." },
+    ]},
+  "calendario-prazos": { cat: "calendario", title: "Acompanhando prazos no calendário", read: 2, lead: "O Calendário reúne as datas importantes dos concursos que você acompanha.",
+    blocks: [
+      { k: "p", t: "Cada cargo acompanhado projeta seus marcos no calendário, com cores distintas:" },
+      { k: "ul", items: [
+        "**Inscrições** — prazo final para se inscrever.",
+        "**Prova** — data de aplicação.",
+        "**Resultado** — divulgação do resultado.",
+      ]},
+      { k: "note", t: "Adicione concursos pelo Acompanhamento para que apareçam aqui automaticamente." },
+    ]},
+  "editar-perfil": { cat: "conta", title: "Editando seu perfil e preferências", read: 2, lead: "Mantenha seus dados atualizados para recomendações mais precisas.",
+    blocks: [
+      { k: "p", t: "Em **Meu perfil** você ajusta nome, e-mail e, principalmente, suas **preferências de recomendação**: formação, áreas de interesse, estados e remuneração mínima." },
+      { k: "tip", t: "Sempre que seus objetivos mudarem, revise as áreas de interesse — elas têm grande peso nas recomendações da tela inicial." },
+    ]},
+  "privacidade": { cat: "conta", title: "Privacidade e uso dos seus dados", read: 2, lead: "Seus dados servem a um único propósito: encontrar os concursos certos para você.",
+    blocks: [
+      { k: "ul", items: [
+        "Usamos seu perfil apenas para **recomendar cargos** e disparar **alertas**.",
+        "Os dados dos editais são **públicos** e sincronizados das fontes oficiais.",
+        "Você pode editar ou remover suas informações a qualquer momento.",
+      ]},
+      { k: "note", t: "Precisa de algo que não está aqui? Fale com o suporte pelo rodapé desta central." },
+    ]},
+};
+
+const HELP_GLOSSARY = [
+  { term: "Aderência", def: "Quão próximo um cargo está da sua descrição de busca, medido por similaridade semântica." },
+  { term: "Banca", def: "Instituição responsável por elaborar e aplicar as provas do concurso." },
+  { term: "Cadastro de reserva", def: "Lista de aprovados além do número de vagas, que podem ser convocados durante a validade do concurso." },
+  { term: "Classificação / Colocação", def: "Posição do candidato na lista de aprovados, conforme a pontuação." },
+  { term: "Convocação", def: "Chamada oficial de um candidato classificado para assumir a vaga." },
+  { term: "Edital", def: "Documento oficial que rege o concurso: cargos, vagas, requisitos, datas e regras." },
+  { term: "Nomeação", def: "Ato formal que efetiva o candidato no cargo público após a convocação." },
+  { term: "Nota de corte", def: "Menor pontuação que garantiu classificação dentro do número de vagas." },
+];
+
+const HELP_FAQ = [
+  { q: "O gFind faz a inscrição no concurso por mim?", a: "Não. O gFind ajuda você a encontrar, comparar e acompanhar concursos de TI. A inscrição é sempre feita no site oficial do órgão ou da banca, dentro do prazo do edital." },
+  { q: "De onde vêm as informações dos editais?", a: "Os dados são sincronizados de fontes oficiais e atualizados automaticamente. Ainda assim, confirme sempre os detalhes no edital oficial antes de tomar decisões." },
+  { q: "Preciso pagar para usar?", a: "As funcionalidades essenciais (busca, alertas e acompanhamento) estão disponíveis com a sua conta gratuita." },
+  { q: "Por que um cargo apareceu com baixa aderência?", a: "Porque ele é apenas tangencialmente relacionado à sua busca. Ele aparece para você não perder nada relevante; refine a descrição ou use filtros para priorizar." },
+  { q: "Como paro de receber avisos de um alerta?", a: "Na tela de Alertas, desative o interruptor do alerta para pausá-lo, ou exclua-o se não interessar mais." },
+];
+
+function HelpRich({ text }) {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+  return <>{parts.map((p, i) => (p.startsWith("**") && p.endsWith("**")) ? <strong key={i}>{p.slice(2, -2)}</strong> : <React.Fragment key={i}>{p}</React.Fragment>)}</>;
+}
+
+function HelpBlocks({ blocks }) {
+  return (
+    <>
+      {blocks.map((b, i) => {
+        if (b.k === "h") return <h2 key={i} id={b.id}><HelpRich text={b.t} /></h2>;
+        if (b.k === "p") return <p key={i}><HelpRich text={b.t} /></p>;
+        if (b.k === "ul") return <ul key={i}>{b.items.map((it, j) => <li key={j}><HelpRich text={it} /></li>)}</ul>;
+        if (b.k === "steps") return <ol key={i} className="steps">{b.items.map((it, j) => <li key={j}><HelpRich text={it} /></li>)}</ol>;
+        if (b.k === "tip" || b.k === "note") return (
+          <div key={i} className={"help-tip" + (b.k === "note" ? " note" : "")}>
+            <Icon name={b.k === "note" ? "info" : "lightbulb"} size={20} />
+            <div className="tip-body"><HelpRich text={b.t} /></div>
+          </div>
+        );
+        return null;
+      })}
+    </>
+  );
+}
+
+function HelpArticle({ id }) {
+  const { navigate } = useApp();
+  const art = HELP_ARTICLES[id];
+  const cat = HELP_CATS.find((c) => c.id === art?.cat);
+  React.useEffect(() => {
+    const sc = document.querySelector(".content-scroll");
+    if (sc) sc.scrollTo({ top: 0 });
+  }, [id]);
+  if (!art) return null;
+  const toc = art.blocks.filter((b) => b.k === "h");
+  const related = (cat?.articles || []).filter((a) => a !== id).slice(0, 3);
+  const goAnchor = (anchor) => {
+    const el = document.getElementById(anchor);
+    const sc = document.querySelector(".content-scroll");
+    if (el && sc) {
+      const r = el.getBoundingClientRect(), sr = sc.getBoundingClientRect();
+      sc.scrollTo({ top: sc.scrollTop + (r.top - sr.top) - 20, behavior: "smooth" });
+    }
+  };
+  return (
+    <div className="page fade-in">
+      <div className="help-breadcrumb">
+        <a onClick={() => navigate("help")}>Central de Ajuda</a>
+        <Icon name="chevron_right" size={16} />
+        <a onClick={() => navigate("help")}>{cat?.title}</a>
+        <Icon name="chevron_right" size={16} />
+        <span style={{ color: "var(--text-primary)" }}>{art.title}</span>
+      </div>
+      <Button variant="text" className="neutral" startIcon="arrow_back" onClick={() => navigate("help")} style={{ marginBottom: 14, marginLeft: -8 }}>Voltar à ajuda</Button>
+      <div className="help-article">
+        <div className="help-doc">
+          <h1 className="t-h4" style={{ margin: "0 0 6px" }}>{art.title}</h1>
+          <div className="row gap-half t-cap text-secondary" style={{ marginBottom: 18 }}>
+            <Icon name="schedule" size={15} /><span>{art.read} min de leitura</span>
+          </div>
+          <p className="lead">{art.lead}</p>
+          <HelpBlocks blocks={art.blocks} />
+          {related.length > 0 && (
+            <div className="help-related">
+              <div className="t-sub2" style={{ marginBottom: 12 }}>Artigos relacionados</div>
+              <div className="col gap-1">
+                {related.map((a) => (
+                  <div key={a} className="help-related-row" onClick={() => navigate("help", { article: a })}>
+                    <Icon name="description" size={18} className="text-secondary" />
+                    <span className="t-body2" style={{ fontWeight: 500 }}>{HELP_ARTICLES[a].title}</span>
+                    <Icon name="chevron_right" size={18} className="text-secondary" style={{ marginLeft: "auto" }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        {toc.length > 0 && (
+          <nav className="help-toc">
+            <div className="help-toc-lab">Neste artigo</div>
+            {toc.map((h) => <a key={h.id} onClick={() => goAnchor(h.id)}>{h.t}</a>)}
+          </nav>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HelpHub() {
+  const { navigate } = useApp();
+  const [q, setQ] = auS("");
+  const [openFaq, setOpenFaq] = auS(-1);
+  const query = q.trim().toLowerCase();
+  const open = (id) => navigate("help", { article: id });
+
+  const matches = query
+    ? Object.entries(HELP_ARTICLES)
+        .filter(([, a]) => (a.title + " " + a.lead).toLowerCase().includes(query))
+        .map(([id, a]) => ({ id, a }))
+    : [];
+  const glossMatches = query ? HELP_GLOSSARY.filter((g) => (g.term + " " + g.def).toLowerCase().includes(query)) : [];
+
+  const popular = ["como-busca-funciona", "aderencia", "criar-alertas", "colocacao-convocacao"];
+
+  return (
+    <div className="page fade-in">
+      <div className="help-hero">
+        <h1 className="t-h4">Central de Ajuda</h1>
+        <p className="t-body1 text-secondary" style={{ margin: "8px 0 0", maxWidth: 520, marginInline: "auto" }}>
+          Aprenda a aproveitar ao máximo o gFind, da primeira busca ao acompanhamento da sua convocação.
+        </p>
+        <div className="help-search-wrap">
+          <div className="help-search">
+            <Icon name="search" size={22} className="text-secondary" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar na ajuda…" aria-label="Buscar na ajuda" />
+            {q && <IconButton name="close" size={20} btnSize="sm" onClick={() => setQ("")} aria-label="Limpar" />}
+          </div>
+        </div>
+        {!query && (
+          <div className="help-quicklinks">
+            {popular.map((id) => (
+              <Chip key={id} label={HELP_ARTICLES[id].title} icon="bolt" size="sm" outlined onClick={() => open(id)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {query ? (
+        <div className="col gap-3" style={{ marginTop: 24 }}>
+          <div>
+            <div className="t-sub1" style={{ marginBottom: 12 }}>
+              {matches.length + glossMatches.length} resultado{matches.length + glossMatches.length === 1 ? "" : "s"} para “{q.trim()}”
+            </div>
+            {matches.length === 0 && glossMatches.length === 0 ? (
+              <EmptyState icon="search_off" title="Nada encontrado" text="Tente outros termos ou navegue pelas categorias abaixo." />
+            ) : (
+              <div className="col gap-1">
+                {matches.map(({ id, a }) => (
+                  <Card key={id} flat hoverable style={{ boxShadow: "var(--e1)", borderColor: "transparent", cursor: "pointer" }} onClick={() => open(id)}>
+                    <div className="card-body row" style={{ gap: 14, alignItems: "flex-start" }}>
+                      <Icon name="description" size={22} className="text-primaryc" style={{ marginTop: 2 }} />
+                      <div className="grow">
+                        <div className="t-sub1">{a.title}</div>
+                        <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>{a.lead}</div>
+                      </div>
+                      <Icon name="chevron_right" size={20} className="text-secondary" />
+                    </div>
+                  </Card>
+                ))}
+                {glossMatches.map((g) => (
+                  <Card key={g.term} flat style={{ boxShadow: "var(--e1)", borderColor: "transparent" }}>
+                    <div className="card-body row" style={{ gap: 14, alignItems: "flex-start" }}>
+                      <Icon name="menu_book" size={22} className="text-secondaryc" style={{ marginTop: 2 }} />
+                      <div className="grow">
+                        <div className="t-sub1">{g.term} <span className="t-cap text-secondary" style={{ fontWeight: 400 }}>· glossário</span></div>
+                        <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>{g.def}</div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="col" style={{ marginTop: 28, gap: 36 }}>
+          <Section icon="quiz" title="Perguntas frequentes">
+            <div>
+              {HELP_FAQ.map((f, i) => (
+                <div key={i} className={"faq-item" + (openFaq === i ? " open" : "")}>
+                  <button className="faq-q" onClick={() => setOpenFaq(openFaq === i ? -1 : i)}>
+                    <span>{f.q}</span>
+                    <Icon name="expand_more" size={22} />
+                  </button>
+                  <div className="faq-a" style={{ maxHeight: openFaq === i ? 320 : 0 }}>
+                    <div className="faq-a-inner">{f.a}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <div className="help-grid">
+            {HELP_CATS.map((c) => (
+              <div key={c.id} className="help-cat" onClick={() => open(c.articles[0])}>
+                <div className="help-cat-ic"><Icon name={c.icon} size={24} /></div>
+                <div className="t-h6">{c.title}</div>
+                <p className="t-body2 text-secondary" style={{ margin: 0 }}>{c.desc}</p>
+                <div className="help-cat-arts">
+                  {c.articles.map((a) => (
+                    <div key={a} className="help-cat-art" onClick={(e) => { e.stopPropagation(); open(a); }}>
+                      <Icon name="chevron_right" size={16} />
+                      <span>{HELP_ARTICLES[a].title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Section icon="menu_book" title="Glossário de concursos">
+            <div className="gloss-grid">
+              {HELP_GLOSSARY.map((g) => (
+                <div key={g.term} className="gloss-item">
+                  <div className="gloss-term"><span className="gloss-dot"></span>{g.term}</div>
+                  <div className="gloss-def">{g.def}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <div className="help-support">
+            <Icon name="support_agent" size={32} />
+            <div className="grow">
+              <div className="t-sub1">Não encontrou o que procurava?</div>
+            </div>
+            <Button variant="contained" startIcon="mail" onClick={() => window.open("mailto:suporte@gfind.com.br")}>Falar com o suporte</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HelpPage() {
+  const { route } = useApp();
+  const art = route.params?.article;
+  return art && HELP_ARTICLES[art] ? <HelpArticle id={art} /> : <HelpHub />;
+}
+
+Object.assign(window, { AuthPage, OnboardingPage, ProfilePage, HelpPage, AREAS, FORMACOES });
+
+  </script>
+
+  <!-- app.jsx -->
+  <script type="text/babel">
+/* global React, ReactDOM, AppProvider, useApp, AppBar, Rail, SearchBar, Icon,
+   HomePage, ResultsPage, DetailPage, ComparePage, SavedPage, TrackingPage, AlertsPage, CalendarPage, ProfilePage, HelpPage,
+   AuthPage, OnboardingPage */
+
+function Toast() {
+  const { toast } = useApp();
+  if (!toast) return null;
+  return (
+    <div className="snackbar">
+      <span className="grow">{toast.msg}</span>
+      {toast.action && <span className="snack-action" onClick={toast.action.onClick}>{toast.action.label}</span>}
+    </div>
+  );
+}
+
+const SHELL_SEARCH = new Set(["results", "detail", "compare"]);
+
+function Shell({ children }) {
+  const { route, navigate } = useApp();
+  const showSearch = SHELL_SEARCH.has(route.name);
+  return (
+    <div className="app-root">
+      <AppBar showSearch={showSearch} searchProps={{
+        compact: true,
+        initialQuery: route.params?.q || "",
+        initialOnlyTi: !!route.params?.ti,
+        onSearch: (q, ti) => navigate("results", { q, ti }),
+      }} />
+      <div className="shell">
+        <Rail />
+        <div className="content content-scroll">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Router() {
+  const { route } = useApp();
+  const { name } = route;
+
+  // Full-screen (no shell)
+  if (name === "auth") return <><AuthPage /><Toast /></>;
+  if (name === "onboarding") return <><OnboardingPage /><Toast /></>;
+
+  let page = null;
+  switch (name) {
+    case "home": page = <HomePage />; break;
+    case "results": page = <ResultsPage />; break;
+    case "detail": page = <DetailPage />; break;
+    case "compare": page = <ComparePage />; break;
+    case "saved": page = <SavedPage />; break;
+    case "tracking": page = <TrackingPage />; break;
+    case "alerts": page = <AlertsPage />; break;
+    case "calendar": page = <CalendarPage />; break;
+    case "profile": page = <ProfilePage />; break;
+    case "help": page = <HelpPage />; break;
+    default: page = <HomePage />;
+  }
+  return <><Shell>{page}</Shell><Toast /></>;
+}
+
+function App() {
+  return (
+    <AppProvider>
+      <Router />
+    </AppProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+  </script>
+</body>
+</html>
