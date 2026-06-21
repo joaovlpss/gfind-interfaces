@@ -14,7 +14,7 @@
 /* ---------- Compare table ---------- */
 .compare-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 640px; background: var(--paper); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--e1); }
 .compare-table th, .compare-table td { padding: 16px 18px; text-align: left; border-bottom: 1px solid var(--divider); vertical-align: top; font-size: .9rem; }
-.compare-table thead th { background: var(--paper-2); position: sticky; top: var(--header-h); z-index: 2; border-bottom: 2px solid var(--divider); }
+.compare-table thead th { background: var(--paper-2); border-bottom: 2px solid var(--divider); }
 .compare-table thead th:first-child { background: var(--paper-2); }
 .compare-table .row-label { font-weight: 500; color: var(--text-secondary); background: var(--paper-2); width: 180px; }
 .compare-table tbody tr:last-child td { border-bottom: none; }
@@ -26,7 +26,7 @@
 .kanban-col { background: var(--bg-sunken); border-radius: var(--r-lg); padding: 12px; min-height: 200px; }
 .kanban-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 12px; }
 .kanban-body { display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
-.kanban-card { background: var(--paper); border-radius: var(--r-md); padding: 14px; box-shadow: var(--e1); cursor: pointer; transition: box-shadow .15s, transform .1s; border: 1px solid transparent; }
+.kanban-card { background: var(--paper); border-radius: var(--r-md); padding: 12px 14px; box-shadow: var(--e1); cursor: pointer; transition: box-shadow .15s, transform .1s; border: 1px solid transparent; font-size: .9rem; }
 .kanban-card:hover { box-shadow: var(--e3); }
 .kanban-card:active { cursor: grabbing; }
 .kanban-empty { text-align: center; color: var(--text-disabled); font-size: .8rem; padding: 24px 8px; border: 1px dashed var(--divider-strong); border-radius: var(--r-md); }

@@ -756,12 +756,14 @@ const DEFAULT_STATE = {
   history: ["análise de dados python federal", "infraestrutura de nuvem e kubernetes"],
   resultNotify: { "inss-ti-2023": true }, // avisar quando a fila se aproximar (pós-resultado)
   dismissedNotifs: [],
+  trackingOrder: [],
 };
 
 /* Migração: o modelo antigo tinha "estudando" como etapa. Agora vira "inscrito" + marcador de estudo. */
 function migrateState(s) {
   if (!s) return s;
   if (!s.studyMark) s.studyMark = {};
+  if (!s.trackingOrder) s.trackingOrder = [];
   if (s.tracking) {
     const t = { ...s.tracking };
     let changed = false;
@@ -828,8 +830,25 @@ function AppProvider({ children }) {
     const k = cargoKey(c);
     setState((s) => {
       const next = { ...s.tracking };
-      if (status === null) delete next[k]; else next[k] = status;
-      return { ...s, tracking: next };
+      if (status === null) {
+        delete next[k];
+        return { ...s, tracking: next, trackingOrder: (s.trackingOrder || []).filter((x) => x !== k) };
+      } else {
+        next[k] = status;
+        const ord = s.trackingOrder || [];
+        return { ...s, tracking: next, trackingOrder: ord.includes(k) ? ord : [...ord, k] };
+      }
+    });
+  }, []);
+
+  const reorderTracking = useCallback((fromKey, toKey, pos) => {
+    setState((s) => {
+      const ord = [...(s.trackingOrder || [])];
+      const filtered = ord.filter((k) => k !== fromKey);
+      const toIdx = filtered.indexOf(toKey);
+      if (toIdx === -1) return { ...s, trackingOrder: [...filtered, fromKey] };
+      filtered.splice(pos === "before" ? toIdx : toIdx + 1, 0, fromKey);
+      return { ...s, trackingOrder: filtered };
     });
   }, []);
 
@@ -892,7 +911,7 @@ function AppProvider({ children }) {
 
   const value = {
     state, route, navigate, toast, showToast, dismissToast, patch,
-    toggleFavorite, setTracking, toggleCalendar, toggleStudying, toggleStudyMark, toggleResultNotify, dismissNotif,
+    toggleFavorite, setTracking, reorderTracking, toggleCalendar, toggleStudying, toggleStudyMark, toggleResultNotify, dismissNotif,
     pushHistory, clearHistory, addAlert, updateAlert, removeAlert, login, logout,
     isFav: (c) => state.favorites.includes(cargoKey(c)),
     trackOf: (c) => state.tracking[cargoKey(c)] || null,
@@ -938,13 +957,13 @@ function Logo({ size = "lg", onClick }) {
 
 /* ---------------- OrgaoIcon ---------------- */
 const ORGAO_LOGOS = {
-  BACEN:  "./uploads/logo_bacen.png",
-  RFB:    "./uploads/logo_receita.svg",
-  SERPRO: "./uploads/logo_serpro.png",
-  TCU:    "./uploads/logo_tcu.png",
-  TRF3:   "./uploads/Logo_trf3.png",
-  TJSP:   "./uploads/logo_tjsp.png",
-  PF:     "./uploads/logo_policia_federal.png",
+  BACEN:  "../uploads/logo_bacen.png",
+  RFB:    "../uploads/logo_receita.svg",
+  SERPRO: "../uploads/logo_serpro.png",
+  TCU:    "../uploads/logo_tcu.png",
+  TRF3:   "../uploads/Logo_trf3.png",
+  TJSP:   "../uploads/logo_tjsp.png",
+  PF:     "../uploads/logo_policia_federal.png",
 };
 
 function OrgaoIcon({ orgao, sigla, size = 44 }) {
@@ -1524,7 +1543,7 @@ function ResultsPage() {
           <span className="grow t-body2"><strong>{compare.length}</strong> selecionado{compare.length > 1 ? "s" : ""} para comparar</span>
           <Button variant="text" size="sm" className="neutral" onClick={() => setCompare([])}>Limpar</Button>
           <Button variant="contained" size="sm" startIcon="compare_arrows" disabled={compare.length < 2}
-            onClick={() => navigate("compare", { ids: compare })}>Comparar</Button>
+            onClick={() => navigate("compare", { ids: compare, fromQ: q, fromTi: ti })}>Comparar</Button>
         </div>
       )}
     </div>
@@ -1777,7 +1796,7 @@ function ComparePage() {
 
   return (
     <div className="page page-wide fade-in">
-      <button className="row gap-half" onClick={() => navigate("results")}
+      <button className="row gap-half" onClick={() => navigate("results", { q: route.params.fromQ || "", ti: !!route.params.fromTi })}
         style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "0 0 8px", fontFamily: "inherit", fontSize: ".9rem" }}>
         <Icon name="arrow_back" size={20} /> Voltar aos resultados
       </button>
@@ -1941,11 +1960,7 @@ function ForecastCard({ f, since, studying, onToggle, onAlert }) {
             <Icon name="info" size={16} style={{ marginTop: 1 }} /><span className="t-cap" style={{ lineHeight: 1.45 }}>{f.nota}</span>
           </div>
 
-          {since && (
-            <div className="row gap-half" style={{ marginTop: 10, color: "var(--secondary-dark)" }}>
-              <Icon name="menu_book" size={16} /><span className="t-cap" style={{ fontWeight: 600 }}>Estudando desde {fmtDate(since)}</span>
-            </div>
-          )}
+
 
           <div className="row gap-1 wrap" style={{ marginTop: 14 }}>
             {studying
@@ -2012,6 +2027,7 @@ function ForecastPicker({ open, onClose, available, onAdd }) {
 function ForecastView() {
   const { state, toggleStudying, addAlert, showToast, navigate } = useApp();
   const [pickerOpen, setPickerOpen] = aS(false);
+  const [confirmRemove, setConfirmRemove] = aS(null); // forecastId a remover
   const studyingIds = Object.keys(state.studying || {});
   const studyingList = window.FORECASTS.filter((f) => studyingIds.includes(f.id));
   const available = window.FORECASTS.filter((f) => !studyingIds.includes(f.id));
@@ -2035,7 +2051,7 @@ function ForecastView() {
         <div className="col gap-2">
           {studyingList.map((f) => (
             <ForecastCard key={f.id} f={f} studying since={state.studying[f.id]?.desde}
-              onToggle={() => { toggleStudying(f.id); showToast("Removido de 'estudando para o próximo'"); }} onAlert={() => makeAlert(f)} />
+              onToggle={() => setConfirmRemove(f.id)} onAlert={() => makeAlert(f)} />
           ))}
         </div>
       )}
@@ -2054,6 +2070,16 @@ function ForecastView() {
 
       <ForecastPicker open={pickerOpen} onClose={() => setPickerOpen(false)} available={available}
         onAdd={(f) => { toggleStudying(f.id); makeAlert(f); }} />
+
+      <Dialog open={!!confirmRemove} onClose={() => setConfirmRemove(null)} width={400} title="Remover acompanhamento">
+        <div className="card-body col gap-2">
+          <p className="t-body2" style={{ margin: 0 }}>Deseja remover este concurso da lista de <strong>Aguardando Edital</strong>?</p>
+          <div className="row gap-1" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+            <Button variant="text" onClick={() => setConfirmRemove(null)}>Cancelar</Button>
+            <Button variant="contained" onClick={() => { toggleStudying(confirmRemove); showToast("Removido de 'Aguardando Edital'"); setConfirmRemove(null); }}>Remover</Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }
@@ -2333,10 +2359,12 @@ function KanbanCard({ c, status }) {
         <div style={{ position: "relative", flexShrink: 0 }} ref={moveRef} onClick={(e) => e.stopPropagation()}>
           <IconButton name="more_vert" size={20} btnSize="sm" aria-label={`Mover “${c.nome_cargo}” para outra etapa`}
             aria-haspopup="menu" aria-expanded={moveOpen} onClick={() => setMoveOpen((v) => !v)} />
-          <Menu open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveRef} align="right" width={220} ariaLabel="Mover para etapa">
+          <Menu open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveRef} align="right" width={220} ariaLabel="Opções do card">
             {TRACK_ORDER.filter((s) => s !== status).map((s) => (
               <MenuItem key={s} icon={TRACK_ICONS[s]} onClick={() => { setTracking(c, s); setMoveOpen(false); showToast(`Movido para "${TRACK_LABELS[s]}"`); }}>Mover para {TRACK_LABELS[s]}</MenuItem>
             ))}
+            <div className="divider" />
+            <MenuItem icon="remove_circle_outline" danger onClick={() => { setTracking(c, null); setMoveOpen(false); showToast("Removido do acompanhamento", { undo: { label: "Desfazer", onClick: () => setTracking(c, status) } }); }}>Remover do acompanhamento</MenuItem>
           </Menu>
         </div>
       </div>
@@ -2350,13 +2378,34 @@ function KanbanCard({ c, status }) {
 }
 
 function KanbanBoard() {
-  const { state, navigate, setTracking, showToast } = useApp();
+  const { state, navigate, setTracking, reorderTracking, showToast } = useApp();
   const [dragKey, setDragKey] = aS(null);
+  const [dragStatus, setDragStatus] = aS(null);
+  const [dragOver, setDragOver] = aS(null); // { key, pos: "before"|"after" }
+
+  const order = state.trackingOrder || [];
   const byStatus = {};
   TRACK_ORDER.forEach((s) => (byStatus[s] = []));
   Object.entries(state.tracking).forEach(([k, st]) => { if (byStatus[st]) { const c = cargoFromKey(k); if (c) byStatus[st].push(c); } });
+  TRACK_ORDER.forEach((s) => {
+    byStatus[s].sort((a, b) => {
+      const ia = order.indexOf(cargoKey(a)); const ib = order.indexOf(cargoKey(b));
+      if (ia === -1 && ib === -1) return 0; if (ia === -1) return 1; if (ib === -1) return -1;
+      return ia - ib;
+    });
+  });
   const total = Object.keys(state.tracking).length;
-  const onDrop = (status) => { if (dragKey) { const c = cargoFromKey(dragKey); if (c) { setTracking(c, status); showToast(`Movido para "${TRACK_LABELS[status]}"`); } setDragKey(null); } };
+
+  const onDrop = (status) => {
+    if (!dragKey) return;
+    if (dragStatus === status && dragOver && dragOver.key !== dragKey) {
+      reorderTracking(dragKey, dragOver.key, dragOver.pos);
+    } else if (dragStatus !== status) {
+      const c = cargoFromKey(dragKey);
+      if (c) { setTracking(c, status); showToast(`Movido para "${TRACK_LABELS[status]}"`); }
+    }
+    setDragKey(null); setDragStatus(null); setDragOver(null);
+  };
 
   const intro = (
     <InlineAlert severity="info" icon="checklist">
@@ -2387,12 +2436,31 @@ function KanbanBoard() {
               <span className="t-cap text-secondary">{byStatus[status].length}</span>
             </div>
             <div className="kanban-body">
-              {byStatus[status].map((c) => (
-                <div key={cargoKey(c)} draggable
-                  onDragStart={() => setDragKey(cargoKey(c))} onDragEnd={() => setDragKey(null)}>
-                  <KanbanCard c={c} status={status} />
-                </div>
-              ))}
+              {byStatus[status].map((c) => {
+                const k = cargoKey(c);
+                const isOver = dragOver?.key === k && dragStatus === status && dragKey !== k;
+                return (
+                  <div key={k} style={{ position: "relative" }} draggable
+                    onDragStart={(e) => { e.stopPropagation(); setDragKey(k); setDragStatus(status); }}
+                    onDragEnd={() => { setDragKey(null); setDragStatus(null); setDragOver(null); }}
+                    onDragOver={(e) => {
+                      e.preventDefault(); e.stopPropagation();
+                      if (dragKey === k) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const pos = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+                      if (dragOver?.key !== k || dragOver?.pos !== pos) setDragOver({ key: k, pos });
+                    }}
+                    onDrop={(e) => { e.stopPropagation(); onDrop(status); }}>
+                    {isOver && dragOver.pos === "before" && (
+                      <div style={{ height: 2, background: "var(--primary)", borderRadius: 2, margin: "0 2px 6px", pointerEvents: "none" }} />
+                    )}
+                    <KanbanCard c={c} status={status} />
+                    {isOver && dragOver.pos === "after" && (
+                      <div style={{ height: 2, background: "var(--primary)", borderRadius: 2, margin: "6px 2px 0", pointerEvents: "none" }} />
+                    )}
+                  </div>
+                );
+              })}
               {byStatus[status].length === 0 && <div className="kanban-empty">Arraste cartões para cá</div>}
             </div>
           </div>
