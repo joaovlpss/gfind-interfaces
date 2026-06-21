@@ -755,6 +755,7 @@ const DEFAULT_STATE = {
   },
   history: ["análise de dados python federal", "infraestrutura de nuvem e kubernetes"],
   resultNotify: { "inss-ti-2023": true }, // avisar quando a fila se aproximar (pós-resultado)
+  dismissedNotifs: [],
 };
 
 /* Migração: o modelo antigo tinha "estudando" como etapa. Agora vira "inscrito" + marcador de estudo. */
@@ -858,6 +859,10 @@ function AppProvider({ children }) {
     });
   }, []);
 
+  const dismissNotif = useCallback((id) => {
+    setState((s) => ({ ...s, dismissedNotifs: [...(s.dismissedNotifs || []), id] }));
+  }, []);
+
   const toggleStudying = useCallback((forecastId, desde) => {
     setState((s) => {
       const next = { ...s.studying };
@@ -887,7 +892,7 @@ function AppProvider({ children }) {
 
   const value = {
     state, route, navigate, toast, showToast, dismissToast, patch,
-    toggleFavorite, setTracking, toggleCalendar, toggleStudying, toggleStudyMark, toggleResultNotify,
+    toggleFavorite, setTracking, toggleCalendar, toggleStudying, toggleStudyMark, toggleResultNotify, dismissNotif,
     pushHistory, clearHistory, addAlert, updateAlert, removeAlert, login, logout,
     isFav: (c) => state.favorites.includes(cargoKey(c)),
     trackOf: (c) => state.tracking[cargoKey(c)] || null,
@@ -933,13 +938,13 @@ function Logo({ size = "lg", onClick }) {
 
 /* ---------------- OrgaoIcon ---------------- */
 const ORGAO_LOGOS = {
-  BACEN:  "./uploads/logo_bacen.png",
-  RFB:    "./uploads/logo_receita.svg",
-  SERPRO: "./uploads/logo_serpro.png",
-  TCU:    "./uploads/logo_tcu.png",
-  TRF3:   "./uploads/Logo_trf3.png",
-  TJSP:   "./uploads/logo_tjsp.png",
-  PF:     "./uploads/logo_policia_federal.png",
+  BACEN:  "../uploads/logo_bacen.png",
+  RFB:    "../uploads/logo_receita.svg",
+  SERPRO: "../uploads/logo_serpro.png",
+  TCU:    "../uploads/logo_tcu.png",
+  TRF3:   "../uploads/Logo_trf3.png",
+  TJSP:   "../uploads/logo_tjsp.png",
+  PF:     "../uploads/logo_policia_federal.png",
 };
 
 function OrgaoIcon({ orgao, sigla, size = 44 }) {
@@ -983,9 +988,9 @@ function SearchBar({ initialQuery = "", initialOnlyTi = false, hero = false, com
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
       />
-      {q && <IconButton name="close" size={20} btnSize="sm" onClick={() => setQ("")} aria-label="Limpar" type="button" />}
+      {q && <IconButton name="close" size={20} btnSize="sm" onClick={() => setQ("")} aria-label="Limpar" title="Limpar busca" type="button" />}
       <IconButton name="arrow_forward" onClick={submit} disabled={!canSubmit}
-        aria-label="Buscar" type="submit"
+        aria-label="Buscar" title="Buscar" type="submit"
         style={{ background: canSubmit ? "var(--primary)" : "var(--bg-sunken)", color: canSubmit ? "#fff" : "var(--text-disabled)" }} />
     </div>
   );
@@ -1013,13 +1018,14 @@ function SearchBar({ initialQuery = "", initialOnlyTi = false, hero = false, com
 /* ---------------- AppBar ---------------- */
 /* ---------------- Notifications center ---------------- */
 function buildNotifications(state, isResultNotify) {
+  const dismissed = state.dismissedNotifs || [];
   const items = [];
   // Acompanhamento — convocações se aproximando (pós-resultado)
   (window.RESULTADOS || []).forEach((r) => {
     const st = window.resultStatus(r);
     if (st.estado === "chegando" && isResultNotify(r.id)) {
       items.push({
-        id: "conv-" + r.id, tone: "warn", icon: "notifications_active",
+        id: "conv-" + r.id, type: "conv", sourceId: r.id, tone: "warn", icon: "notifications_active",
         title: `Convocação chegando — ${r.sigla}`,
         text: `Faltam ${st.faltam} ${st.faltam === 1 ? "posição" : "posições"} para a sua vez em ${r.cargo}.`,
         when: `há ${r.sync_horas}h`,
@@ -1031,11 +1037,11 @@ function buildNotifications(state, isResultNotify) {
   (state.alerts || []).forEach((al) => {
     if (al.ativo && al.novos > 0) {
       items.push({
-        id: "al-" + al.id, tone: "primary", icon: "campaign",
+        id: "al-" + al.id, type: "alert", alertId: al.id, tone: "primary", icon: "campaign",
         title: `${al.novos} ${al.novos > 1 ? "novos editais compatíveis" : "novo edital compatível"}`,
         text: `Do seu alerta “${al.nome || al.query}”.`,
         when: "hoje",
-        route: { name: "results", params: { q: al.query, ti: al.onlyTi }, clearAlert: al.id },
+        route: { name: "results", params: { q: al.query, ti: al.onlyTi } },
       });
     }
   });
@@ -1044,7 +1050,7 @@ function buildNotifications(state, isResultNotify) {
   (window.FORECASTS || []).forEach((f) => {
     if (studyingIds.includes(f.id) && f.situacao === "autorizado") {
       items.push({
-        id: "fc-" + f.id, tone: "secondary", icon: "verified",
+        id: "fc-" + f.id, type: "forecast", tone: "secondary", icon: "verified",
         title: `Edital autorizado — ${f.sigla}`,
         text: `${f.cargo}. Previsão: ${f.previsao}.`,
         when: "há 1 dia",
@@ -1052,15 +1058,17 @@ function buildNotifications(state, isResultNotify) {
       });
     }
   });
-  return items;
+  return items.filter(it => !dismissed.includes(it.id));
 }
 
 function NotificationsPanel({ open, onClose, anchorRef }) {
-  const { state, navigate, isResultNotify, updateAlert } = useApp();
+  const { state, navigate, isResultNotify, updateAlert, toggleResultNotify, dismissNotif } = useApp();
   const items = buildNotifications(state, isResultNotify);
   const go = (it) => {
+    if (it.type === "alert") updateAlert(it.alertId, { novos: 0 });
+    else if (it.type === "conv") toggleResultNotify(it.sourceId);
+    else dismissNotif(it.id);
     onClose();
-    if (it.route.clearAlert) updateAlert(it.route.clearAlert, { novos: 0 });
     navigate(it.route.name, it.route.params);
   };
   return (
@@ -1097,9 +1105,15 @@ function AppBar({ showSearch, searchProps }) {
   const { state, navigate, logout, route, isResultNotify } = useApp();
   const [menuOpen, setMenuOpen] = uS(false);
   const [notifOpen, setNotifOpen] = uS(false);
+  const [seenNotifIds, setSeenNotifIds] = uS(new Set());
   const avatarRef = uR(null);
   const bellRef = uR(null);
-  const notifCount = buildNotifications(state, isResultNotify).length;
+  const notifs = buildNotifications(state, isResultNotify);
+  const notifCount = notifs.filter(n => !seenNotifIds.has(n.id)).length;
+  const handleBellClick = () => {
+    setSeenNotifIds(new Set(notifs.map(n => n.id)));
+    setNotifOpen(v => !v);
+  };
 
   return (
     <header className="appbar">
@@ -1110,11 +1124,11 @@ function AppBar({ showSearch, searchProps }) {
       {showSearch && <div className="search-slot" style={{ marginLeft: 16 }}><SearchBar {...searchProps} /></div>}
       <div className="grow" />
       <div style={{ position: "relative" }} ref={bellRef}>
-        <IconButton name="notifications" onClick={() => setNotifOpen((v) => !v)} aria-label="Notificações" />
+        <IconButton name="notifications" onClick={handleBellClick} aria-label="Notificações" title="Notificações" />
         {notifCount > 0 && <span className="notif-count">{notifCount}</span>}
       </div>
       <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} anchorRef={bellRef} />
-      <button className="icon-btn" ref={avatarRef} onClick={() => setMenuOpen((v) => !v)} aria-label="Conta" style={{ width: 40, height: 40 }}>
+      <button className="icon-btn" ref={avatarRef} onClick={() => setMenuOpen((v) => !v)} aria-label="Conta" title="Conta" style={{ width: 40, height: 40 }}>
         <Avatar size={32} round color="var(--secondary)" style={{ fontSize: 14 }}>{state.user.iniciais}</Avatar>
       </button>
       <Menu open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={avatarRef} width={240}>
@@ -1180,16 +1194,18 @@ function CardActions({ cargo, onCompare, compareOn, compact, favCtl }) {
     : () => { const was = isFav(cargo); toggleFavorite(cargo); showToast(was ? "Removido dos salvos" : "Adicionado aos salvos"); };
   return (
     <div className="row gap-half" onClick={(e) => e.stopPropagation()}>
-      <IconButton name={fav ? "favorite" : "favorite_border"} fill={fav} size={22} btnSize="sm"
-        className={fav ? "active-fav" : ""} aria-label={favCtl && favCtl.pending ? "Desfazer remoção" : "Favoritar"}
+      <IconButton name={fav ? "bookmark" : "bookmark_border"} fill={fav} size={22} btnSize="sm"
+        className={fav ? "active-fav" : ""}
+        aria-label={favCtl && favCtl.pending ? "Desfazer remoção" : fav ? "Remover dos salvos" : "Salvar edital"}
+        title={favCtl && favCtl.pending ? "Desfazer remoção" : fav ? "Remover dos salvos" : "Salvar edital"}
         onClick={onFav} />
       {onCompare && (
         <IconButton name={compareOn ? "library_add_check" : "library_add"} fill={compareOn} size={22} btnSize="sm"
-          className={compareOn ? "text-primaryc" : ""} aria-label="Comparar" onClick={() => onCompare(cargo)} />
+          className={compareOn ? "text-primaryc" : ""} aria-label="Comparar" title="Comparar editais" onClick={() => onCompare(cargo)} />
       )}
       <div style={{ position: "relative" }} ref={trackRef}>
         <IconButton name={track ? TRACK_ICONS[track] : "playlist_add"} size={22} btnSize="sm"
-          className={track ? "text-secondaryc" : ""} aria-label="Acompanhar" onClick={() => setTrackMenu((v) => !v)} />
+          className={track ? "text-secondaryc" : ""} aria-label="Acompanhar" title="Acompanhar este edital" onClick={() => setTrackMenu((v) => !v)} />
         <Menu open={trackMenu} onClose={() => setTrackMenu(false)} anchorRef={trackRef} align="right" width={200}>
           {Object.keys(TRACK_LABELS).map((k) => (
             <MenuItem key={k} icon={TRACK_ICONS[k]} onClick={() => { setTracking(cargo, k); setTrackMenu(false); showToast(`Movido para "${TRACK_LABELS[k]}"`); }}>
@@ -1264,7 +1280,7 @@ function ResultCard({ cargo, onOpen, onCompare, compareOn, defaultExpanded, save
       </div>
       {pending ? (
         <div className="row spread" style={{ padding: "10px 20px 12px", borderTop: "1px solid var(--divider)", gap: 12 }}>
-          <span className="row gap-half t-body2 text-secondary"><Icon name="heart_broken" size={18} />Será removido ao sair de “Salvos”</span>
+          <span className="row gap-half t-body2 text-secondary"><Icon name="bookmark_remove" size={18} />Será removido ao sair de “Salvos”</span>
           <Button variant="text" size="sm" startIcon="undo" onClick={savedCtl.onToggle}>Desfazer</Button>
         </div>
       ) : (
@@ -1356,7 +1372,7 @@ function HomePage() {
             <div className="t-body2 text-secondary" style={{ marginTop: 2 }}>Adicione suas áreas de interesse para receber recomendações personalizadas.</div>
           </div>
           <Button variant="outlined" size="sm" onClick={() => navigate("profile")}>Completar</Button>
-          <IconButton name="close" size={18} btnSize="sm" aria-label="Dispensar" onClick={() => patch({ profile: { ...state.profile, dismissedResidual: true } })} />
+          <IconButton name="close" size={18} btnSize="sm" aria-label="Dispensar" title="Dispensar" onClick={() => patch({ profile: { ...state.profile, dismissedResidual: true } })} />
         </div>
       )}
       <div className="col center" style={{ textAlign: "center", marginBottom: 8 }}>
@@ -1371,7 +1387,7 @@ function HomePage() {
       </div>
 
       <div style={{ maxWidth: 720, margin: "28px auto 0" }}>
-        <div className="t-overline text-secondary">Experimente</div>
+        <div className="t-overline text-secondary">Buscas sugeridas</div>
         <div className="row wrap gap-1" style={{ marginTop: 10 }}>
           {EXAMPLE_QUERIES.map((q) => <Chip key={q} label={q} outlined onClick={() => run(q, false)} />)}
         </div>
@@ -1614,7 +1630,7 @@ function DetailPage() {
               {track && <><div className="divider" /><MenuItem icon="remove_circle_outline" danger onClick={() => { setTracking(cargo, null); setTrackOpen(false); }}>Remover</MenuItem></>}
             </Menu>
           </div>
-          <Button variant="outlined" startIcon={fav ? "favorite" : "favorite_border"} className={fav ? "" : ""}
+          <Button variant="outlined" startIcon={fav ? "bookmark" : "bookmark_border"}
             onClick={() => { toggleFavorite(cargo); showToast(fav ? "Removido dos salvos" : "Salvo"); }}>
             {fav ? "Salvo" : "Salvar"}
           </Button>
@@ -1623,7 +1639,7 @@ function DetailPage() {
             {inCal ? "No calendário" : "Adicionar ao calendário"}
           </Button>
           <div className="grow" />
-          <IconButton name="share" aria-label="Compartilhar" onClick={() => showToast("Link copiado")} />
+          <IconButton name="share" aria-label="Compartilhar" title="Compartilhar" onClick={() => showToast("Link copiado")} />
         </div>
       </Card>
 
@@ -1862,13 +1878,13 @@ function SavedPage() {
           <TextField value={filterQ} onChange={(e) => setFilterQ(e.target.value)}
             placeholder="Filtrar por cargo, órgão ou UF…" icon="search"
             endIcon={filterQ ? <IconButton name="close" size={18} btnSize="sm"
-              onClick={() => setFilterQ('')}
+              onClick={() => setFilterQ('')} title="Limpar filtro"
               type="button" /> : null} />
         </div>
       )}
       {cargos.length === 0 ? (
         <EmptyState icon="bookmark_border" title="Você ainda não salvou nenhum cargo"
-          text="Toque no coração nos resultados de busca para guardar editais e acompanhá-los aqui."
+          text="Toque no marcador nos resultados de busca para guardar editais e acompanhá-los aqui."
           action={<Button variant="contained" startIcon="search" onClick={() => navigate("home")}>Buscar cargos</Button>} />
       ) : visibleCargos.length === 0 ? (
         <div className="empty-wrap">
@@ -2456,8 +2472,8 @@ function AlertsPage() {
                   <Switch checked={al.ativo} ariaLabel={`${al.ativo ? "Pausar" : "Ativar"} alerta ${al.nome || al.query}`} onChange={() => { updateAlert(al.id, { ativo: !al.ativo }); }} />
                   <div className="row gap-half">
                     {al.novos > 0 && al.ativo && <Button variant="text" size="sm" onClick={() => { navigate("results", { q: al.query, ti: al.onlyTi }); updateAlert(al.id, { novos: 0 }); }}>Ver resultados</Button>}
-                    <IconButton name="edit" size={20} btnSize="sm" aria-label="Editar" onClick={() => setEditing(al)} />
-                    <IconButton name="delete" size={20} btnSize="sm" aria-label="Excluir" onClick={() => { removeAlert(al.id); showToast("Alerta excluído"); }} />
+                    <IconButton name="edit" size={20} btnSize="sm" aria-label="Editar" title="Editar alerta" onClick={() => setEditing(al)} />
+                    <IconButton name="delete" size={20} btnSize="sm" aria-label="Excluir" title="Excluir alerta" onClick={() => { removeAlert(al.id); showToast("Alerta excluído"); }} />
                   </div>
                 </div>
               </div>
