@@ -45,9 +45,9 @@
 .nav-item.active { background: var(--primary-050); color: var(--primary-dark); }
 .nav-item.active .msym { color: var(--primary); }
 .nav-item .badge-count {
-  margin-left: auto; font-size: .72rem; font-weight: 600;
-  background: var(--secondary); color: #fff; border-radius: var(--r-pill);
-  min-width: 20px; height: 20px; padding: 0 6px;
+  margin-left: auto; font-size: .7rem; font-weight: 700; line-height: 1;
+  background: var(--error); color: #fff; border-radius: var(--r-pill);
+  min-width: 19px; height: 19px; padding: 0 5px;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .nav-section { padding: 16px 16px 6px; }

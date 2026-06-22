@@ -28,7 +28,23 @@
 .kanban-body { display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
 .kanban-card { background: var(--paper); border-radius: var(--r-md); padding: 12px 14px; box-shadow: var(--e1); cursor: pointer; transition: box-shadow .15s, transform .1s; border: 1px solid transparent; font-size: .9rem; }
 .kanban-card:hover { box-shadow: var(--e3); }
-.kanban-card:active { cursor: grabbing; }
+.kanban-card.dragging { opacity: .4; }
+.kanban-handle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; margin: -4px 2px -4px -6px; flex-shrink: 0; padding: 0;
+  border: none; background: none; cursor: grab; color: var(--text-disabled);
+  border-radius: var(--r-md); touch-action: none;
+}
+.kanban-handle:hover { background: var(--hover); color: var(--text-secondary); }
+.kanban-handle:active { cursor: grabbing; }
+.kanban-col.drop-target { outline: 2px dashed var(--primary); outline-offset: -3px; background: var(--primary-050); }
+body.kanban-dragging { cursor: grabbing; user-select: none; }
+.kanban-ghost {
+  position: fixed; z-index: 1200; pointer-events: none;
+  background: var(--paper); border-radius: var(--r-md); padding: 12px 14px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.22); border: 1px solid var(--divider);
+  transform: rotate(-1.5deg); max-width: 320px;
+}
 .kanban-empty { text-align: center; color: var(--text-disabled); font-size: .8rem; padding: 24px 8px; border: 1px dashed var(--divider-strong); border-radius: var(--r-md); }
 @media (max-width: 1100px) { .kanban { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 680px) { .kanban { grid-template-columns: 1fr; } }
